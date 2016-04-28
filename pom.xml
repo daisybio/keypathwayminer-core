@@ -11,7 +11,7 @@
 
   <groupId>dk.sdu.kpm</groupId>
   <artifactId>kpm-core</artifactId>
-  <version>5.0.0.001</version>
+  <version>5.0.0.002</version>
   <packaging>maven-plugin</packaging>
 
   <name>kpm-library Maven Plugin</name>

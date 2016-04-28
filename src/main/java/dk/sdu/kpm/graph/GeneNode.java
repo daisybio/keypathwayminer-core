@@ -300,6 +300,9 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
             }
         } else if (!nodeId.equals(other.nodeId)) {
             return false;
+            //if the two nodes contain expression data from different datasets they are not equal!
+        } else if (!other.differenceIntMap.keySet().containsAll(this.differenceIntMap.keySet())){
+            return false;
         }
         return true;
     }

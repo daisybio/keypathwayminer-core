@@ -41,6 +41,10 @@ public class GeneCluster implements Comparable<GeneCluster>, Serializable {
     private double ALPHA = 0;
     private double BETA = 0;
 
+	public static void resetExcpMap(){
+		excNodeToExcCluster = new HashMap<GeneNode, GeneCluster>();
+	}
+
 	private GeneCluster() {
 	}
 

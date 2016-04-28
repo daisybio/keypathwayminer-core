@@ -3,14 +3,17 @@ package dk.sdu.kpm;
 import dk.sdu.kpm.algo.glone.ACO;
 import dk.sdu.kpm.algo.glone.Greedy;
 import dk.sdu.kpm.algo.glone.Optimal;
+import dk.sdu.kpm.algo.ines.GeneCluster;
 import dk.sdu.kpm.algo.ines.GraphProcessing;
 import dk.sdu.kpm.algo.ines.LComponentGraph;
+import dk.sdu.kpm.graph.GeneNode;
 import dk.sdu.kpm.graph.KPMGraph;
 import dk.sdu.kpm.graph.Result;
 import dk.sdu.kpm.logging.KpmLogger;
 import dk.sdu.kpm.taskmonitors.IKPMTaskMonitor;
 import dk.sdu.kpm.taskmonitors.KPMDummyTaskMonitor;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -40,18 +43,21 @@ public class AlgoComputations {
                     lcg = GraphProcessing.componentGraph(g, taskMonitor, settings);
                     results = lcg.ACO();
                     lcg = null;
+                    GeneCluster.resetExcpMap(); //to avoid keep exception gene clusters around forever
                     break;
 
                 case GREEDY:
                     lcg = GraphProcessing.componentGraph(g, taskMonitor, settings);
                     results = lcg.greedy();
                     lcg = null;
+                    GeneCluster.resetExcpMap(); //to avoid keep exception gene clusters around forever
                     break;
 
                 case OPTIMAL:
                     lcg = GraphProcessing.componentGraph(g, taskMonitor, settings);
                     results = lcg.optimal();
                     lcg = null;
+                    GeneCluster.resetExcpMap(); //to avoid keep exception gene clusters around forever
                     break;
 
                 case EXCEPTIONSUMGREEDY:
