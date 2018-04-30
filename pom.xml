@@ -12,7 +12,7 @@
   <groupId>dk.sdu.kpm</groupId>
   <artifactId>kpm-core</artifactId>
   <version>5.0.0.002</version>
-  <packaging>jar</packaging>
+  <packaging>maven-plugin</packaging>
 
   <name>kpm-library Maven Plugin</name>
 
@@ -75,18 +75,6 @@
               </execution>
             </executions>
           </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
 
       </build>

@@ -56,7 +56,6 @@ public class KPMSettings {
 
     public volatile List<String> VARYING_L_ID = new ArrayList<String>(2);
 
-
     public volatile Map<String,Boolean> VARYING_L_ID_IN_PERCENTAGE = 
             new HashMap<String, Boolean>(2);
 
