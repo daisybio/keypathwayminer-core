@@ -20,7 +20,7 @@
 
   <build>
     <plugins>
-        <plugin>
+      <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
             <version>3.2</version>
@@ -37,7 +37,20 @@
           <goalPrefix>kpm-core</goalPrefix>
           <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
         </configuration>
+
       </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <executions>
+                <execution>
+                    <id>attach-sources</id>
+                    <goals>
+                        <goal>jar</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
     </plugins>
   </build>
   <profiles>
@@ -157,18 +170,21 @@
             <artifactId>jung-visualization</artifactId>
             <version>2.0.1</version>
             <type>jar</type>
+            <optional>false</optional>
         </dependency>
         <dependency>
             <groupId>net.sf.jung</groupId>
             <artifactId>jung-graph-impl</artifactId>
             <version>2.0.1</version>
             <type>jar</type>
+            <optional>false</optional>
         </dependency>
         <dependency>
             <groupId>net.sf.jung</groupId>
             <artifactId>jung-algorithms</artifactId>
             <version>2.0.1</version>
             <type>jar</type>
+            <optional>false</optional>
         </dependency>
         <dependency>
             <groupId>org.mvel</groupId>

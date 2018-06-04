@@ -5,7 +5,6 @@
 package dk.sdu.kpm.graph;
 
 import dk.sdu.kpm.Heuristic;
-import dk.sdu.kpm.KPMSettings;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -33,7 +32,7 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
         
     public Map<String, char[]> differenceMap;
     
-    public Map<String, int[]> differenceIntMap;
+    public Map<String, double[]> differenceIntMap;
     
     public Map<String, Integer> numUpExpressedCasesMap;
     
@@ -55,7 +54,7 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     
     private boolean isValid;
     
-    public GeneNode(String nodeId, String symbol, Map<String, int[]> differenceIntMap) {
+    public GeneNode(String nodeId, String symbol, Map<String, double[]> differenceIntMap) {
         this.nodeId = nodeId;
         this.symbol = symbol;
         isValid = false;
@@ -77,7 +76,7 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     	this.totalDownCases = n.totalDownCases;
     	this.totalDownCases = n.totalDownCases;
     	this.differenceMap = new HashMap<String, char[]>(n.differenceMap);
-    	this.differenceIntMap = new HashMap<String, int[]>(n.differenceIntMap);
+    	this.differenceIntMap = new HashMap<String, double[]>(n.differenceIntMap);
     	this.numUpExpressedCasesMap = new HashMap<String, Integer>(n.numUpExpressedCasesMap);
     	this.numDownExpressedCasesMap = new HashMap<String, Integer>(n.numDownExpressedCasesMap);
     	this.numNoDiffExpressedCasesMap = new HashMap<String, Integer>(n.numNoDiffExpressedCasesMap);
@@ -96,7 +95,7 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
         totalCases = 0;
 
         for (String expId : differenceIntMap.keySet()) {
-            int[] differArray = differenceIntMap.get(expId);
+            double[] differArray = differenceIntMap.get(expId);
             int ncases = differArray.length;
             totalCases += ncases;
             int numUp = 0;
@@ -105,9 +104,10 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
 
             numCasesMap.put(expId, ncases);
 
+            // Here UP or DOWNREGULATIOn is checked
             char[] diffarray = new char[ncases];
             for (int i = 0; i < ncases; i++) {
-                int option = differArray[i];
+                double option = differArray[i];
                 if (option == 1) {
                     diffarray[i] = UPREGULATED;
                     numUp++;
@@ -144,10 +144,10 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
         return differenceMap;
     }
 
-    public Map<String, int[]> getDifferenceIntMap() {
+    public Map<String, double[]> getDifferenceIntMap() {
         return differenceIntMap;
     }
-    public void setDifferenceIntMap(Map<String, int[]> differenceIntMap) {
+    public void setDifferenceIntMap(Map<String, double[]> differenceIntMap) {
         this.differenceIntMap = differenceIntMap;
         computeDifferenceMap();
     }

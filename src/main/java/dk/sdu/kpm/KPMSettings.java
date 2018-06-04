@@ -73,7 +73,7 @@ public class KPMSettings {
     public volatile HashMap<String, Integer> CASE_EXCEPTIONS_MAP = new HashMap<String, Integer>();
 
 
-    // Map storing the paths to the multipe expression files
+    // Map storing the paths to the multiple expression files
     // NOTE1: The key ID's must be the same as the key ID's in
     // CASE_EXCEPTIONS_MAP
     // NOTE2: Will only be used if MULTI == True
