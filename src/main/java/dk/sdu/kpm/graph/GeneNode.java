@@ -53,11 +53,18 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     private double averageNeighborExpression;
     
     private boolean isValid;
+
+    public double getPvalue() {
+        return pvalue;
+    }
+
+    private double pvalue = 1;
     
-    public GeneNode(String nodeId, String symbol, Map<String, double[]> differenceIntMap) {
+    public GeneNode(String nodeId, String symbol, Map<String, double[]> differenceIntMap, double pvalue) {
         this.nodeId = nodeId;
         this.symbol = symbol;
         isValid = false;
+        this.pvalue = pvalue;
         this.differenceIntMap = differenceIntMap;
         computeDifferenceMap();
     }
@@ -81,6 +88,7 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     	this.numDownExpressedCasesMap = new HashMap<String, Integer>(n.numDownExpressedCasesMap);
     	this.numNoDiffExpressedCasesMap = new HashMap<String, Integer>(n.numNoDiffExpressedCasesMap);
     	this.numCasesMap = new HashMap<String, Integer>(n.numCasesMap);
+    	this.pvalue = n.pvalue;
     }
     
     private void computeDifferenceMap() {

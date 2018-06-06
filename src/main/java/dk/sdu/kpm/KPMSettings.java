@@ -79,6 +79,10 @@ public class KPMSettings {
     // NOTE2: Will only be used if MULTI == True
     public volatile Map<String, String> MATRIX_FILES_MAP = new HashMap<String, String>();
 
+    // Map storing the paths to the multiple p-value (=expression) files
+    // NOTE1: The key ID's must be the same as the key ID's in
+    public volatile Map<String, String> PVALUE_FILES_MAP = new HashMap<String, String>();
+
     // What algorithm is being used -- KPM is the old ACO that is outperformed
     // by LCG, the new ACO; GREEDY is a greedy algorithm that always takes the
     // next exception nodes with the highest fitness; OPTIMAL computes the
