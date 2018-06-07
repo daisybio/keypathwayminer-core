@@ -62,11 +62,12 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
     public static final String OR_NODE_VALID_CONDITION = "OR";
     public static final String AND_NODE_VALID_CONDITION = "AND";
     public char treatBackNodes;
+    public boolean use_double;
 
     /** stores the pvalues of the differential gene expression for each
      * gene identifier.
      */
-    public Map<String, Double> nodeIdToPvalue;
+    public Map<String,Map<String, Double>> nodeIdToPvalue;
 
     // private Map<String, Set> edgeIdToPaths;
     /**
@@ -82,7 +83,7 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
                     LinkedList<String[]> edgeList,
                     Map<String, String> nodeIdToSymbol,
                     Map<String, Integer> num_cases_map,
-                    Map<String, Double> nodeIdToPvalue) {
+                    Map<String,Map<String, Double>> nodeIdToPvalue) {
         super();
         this.expressionIdToNodeMap = expressionIdToNodeMap;
         this.expressionIdToNodeOriginal = expressionIdToNodeMap;
@@ -112,7 +113,8 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
                     Map<String, Set<String>> backNodesMap,
                     Map<String, Set<String>> backGenesMap,
                     Map<String, Integer> num_cases_map,
-                    Map<String, Double> nodeIdToPvalue) {
+                    Map<String,Map<String, Double>> nodeIdToPvalue,
+                    boolean use_double) {
         super();
         this.expressionIdToNodeMap = expressionIdToNodeMap;
         this.expressionIdToNodeOriginal = expressionIdToNodeMap;
@@ -126,6 +128,7 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
         numCasesMap = num_cases_map;
         this.nodeIdToPvalue = nodeIdToPvalue;
         treatBackNodes = 'n';
+        this.use_double = use_double;
         createGraph();
     }
 
@@ -148,6 +151,7 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
         positiveList = new HashSet<String>(g.positiveList);
         negativeList = new HashSet<String>(g.negativeList);
         this.nodeIdToPvalue = g.nodeIdToPvalue;
+        this.use_double = g.use_double;
         
         // Ensure we copy the vertices.
         for (GeneNode node : g.getVertices()) {
@@ -178,7 +182,7 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
         for (String nodeId : expressionIdToNodeMap.keySet()) {
             Map<String, double[]> exprVectors = expressionIdToNodeMap.get(nodeId);
             nodeIdToGeneNode.put(nodeId, new GeneNode(nodeId, nodeIdToSymbol.get(nodeId),
-                    expressionIdToNodeMap.get(nodeId), nodeIdToPvalue.get(nodeId)));
+                    expressionIdToNodeMap.get(nodeId), nodeIdToPvalue.get(nodeId), use_double));
         }
 
         for (String[] pair : edgeList) {
@@ -453,7 +457,7 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
             expressionIdToNodeMap.put(nodeId, expVectors);
             if (!nodeIdToGeneNode.containsKey(nodeId)) {
                 nodeIdToGeneNode.put(nodeId, new GeneNode(nodeId,
-                        nodeIdToSymbol.get(nodeId), expVectors, nodeIdToPvalue.get(nodeId)));
+                        nodeIdToSymbol.get(nodeId), expVectors, nodeIdToPvalue.get(nodeId), use_double));
             } else {
                 nodeIdToGeneNode.get(nodeId).setDifferenceIntMap(expVectors);
             }

@@ -80,7 +80,9 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         double sumOfLogPvals = 0;
         for (GeneNode n : this.getVertices()) {
             nrTests++;
-            sumOfLogPvals += Math.log(n.getPvalue());
+            // TODO: Currently random value is chosen
+            String akey = n.averagePvalue.keySet().toArray(new String[n.averagePvalue.keySet().size()])[0];
+            sumOfLogPvals += Math.log(n.averagePvalue.get(akey));
         }
         double testStat = -2 * sumOfLogPvals;
         this.testStatistics = testStat;

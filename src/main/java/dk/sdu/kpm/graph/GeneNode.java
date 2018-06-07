@@ -5,6 +5,8 @@
 package dk.sdu.kpm.graph;
 
 import dk.sdu.kpm.Heuristic;
+import dk.sdu.kpm.utils.Comparator;
+import dk.sdu.kpm.utils.Comparison;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -54,17 +56,32 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     
     private boolean isValid;
 
-    public double getPvalue() {
+    public Map<String, Double> getPvalue() {
         return pvalue;
     }
 
-    private double pvalue = 1;
+    private Map<String, Double> pvalue;
+
+    public HashMap<String, Double> getAveragePvalue() {
+        return averagePvalue;
+    }
+
+    public boolean use_double;
+
+    // Average p-value is calculated per gene from the samples
+    // Must not actually be p-values
+    // For each Dataset an separate average is calculated
+    public HashMap<String, Double> averagePvalue = new HashMap<String, Double>();
     
-    public GeneNode(String nodeId, String symbol, Map<String, double[]> differenceIntMap, double pvalue) {
+    public GeneNode(String nodeId,
+                    String symbol, Map<String, double[]> differenceIntMap,
+                    Map<String, Double> pvalue,
+                    boolean use_double) {
         this.nodeId = nodeId;
         this.symbol = symbol;
         isValid = false;
         this.pvalue = pvalue;
+        this.use_double = use_double;
         this.differenceIntMap = differenceIntMap;
         computeDifferenceMap();
     }
@@ -89,6 +106,7 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     	this.numNoDiffExpressedCasesMap = new HashMap<String, Integer>(n.numNoDiffExpressedCasesMap);
     	this.numCasesMap = new HashMap<String, Integer>(n.numCasesMap);
     	this.pvalue = n.pvalue;
+    	this.use_double = n.use_double;
     }
     
     private void computeDifferenceMap() {
@@ -113,26 +131,45 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
             numCasesMap.put(expId, ncases);
 
             // Here UP or DOWNREGULATIOn is checked
-            char[] diffarray = new char[ncases];
-            for (int i = 0; i < ncases; i++) {
-                double option = differArray[i];
-                if (option == 1) {
-                    diffarray[i] = UPREGULATED;
-                    numUp++;
-                    totalUpCases++;
-                } else if (option == -1) {
-                    diffarray[i] = DOWNREGULATED;
-                    numDown++;
-                    totalDownCases++;
-                } else {
-                    diffarray[i] = NODIFFERENCE;
-                    numDiff++;
-                    totalNoDiffCases++;
+            if(!use_double) {
+                char[] diffarray = new char[ncases];
+                for (int i = 0; i < ncases; i++) {
+                    double option = differArray[i];
+                    if (Math.abs(option-1.0)<=0.0000000001) {
+                        diffarray[i] = UPREGULATED;
+                        numUp++;
+                        totalUpCases++;
+                    } else if (Math.abs(option+1.0)<=0.0000000001) {
+                        diffarray[i] = DOWNREGULATED;
+                        numDown++;
+                        totalDownCases++;
+                    } else {
+                        diffarray[i] = NODIFFERENCE;
+                        numDiff++;
+                        totalNoDiffCases++;
+                    }
                 }
+                differenceMap.put(expId, diffarray);
+                numUpExpressedCasesMap.put(expId, numUp);
+                numDownExpressedCasesMap.put(expId, numDown);
+
             }
-            differenceMap.put(expId, diffarray);
-            numUpExpressedCasesMap.put(expId, numUp);
-            numDownExpressedCasesMap.put(expId, numDown);
+            else{
+                double sum = 0;
+                for (int i = 0; i<differArray.length; i++){
+                    sum+=differArray[i];
+                    // TODO: adapt to accept different thresholds and different comparators
+                    if(!Comparison.evalate(differArray[i],0.05, Comparator.LET)){
+                        // numDiff no Differential expression = insignficant p-value
+                        numDiff++;
+                    }
+                }
+                double avgDouble = sum/(differArray.length)*1.0;
+                this.averagePvalue.put(expId, avgDouble);
+                differenceMap.put(expId, null);
+                numUpExpressedCasesMap.put(expId, -1);
+                numDownExpressedCasesMap.put(expId, -1);
+            }
             numNoDiffExpressedCasesMap.put(expId, numDiff);
         }
     }

@@ -82,6 +82,9 @@ public class KPMSettings {
     // Map storing the paths to the multiple p-value (=expression) files
     // NOTE1: The key ID's must be the same as the key ID's in
     public volatile Map<String, String> PVALUE_FILES_MAP = new HashMap<String, String>();
+    public volatile Map<String, Double> PVALUE_MAP = new HashMap<String, Double>();
+
+    public volatile boolean USE_DOUBLE_VALUES =false;
 
     // What algorithm is being used -- KPM is the old ACO that is outperformed
     // by LCG, the new ACO; GREEDY is a greedy algorithm that always takes the
@@ -92,6 +95,7 @@ public class KPMSettings {
     // Number of solutions the algorithm has to return (it will always return
     // the best ones). A -1 will return ALL results.
     public volatile int NUM_SOLUTIONS = 20;
+
 
 	/* ------ ADVANCED PARAMETERS (GENERAL) ------------ */
 
