@@ -58,9 +58,9 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
                 i++;
                 // add all edges for the newly created node
                 for (GeneEdge e : kpmGraph.getOutEdges(nextNode)) {
-                    if (this.containsVertex(this.getEndpoints(e).getFirst()) &&
-                            this.containsVertex(this.getEndpoints(e).getSecond())) {
-                        addEdge(e, new Pair<GeneNode>(getEndpoints(e)), EdgeType.UNDIRECTED);
+                    if (this.containsVertex(kpmGraph.getEndpoints(e).getFirst()) &&
+                            this.containsVertex(kpmGraph.getEndpoints(e).getSecond())) {
+                        addEdge(e, new Pair<GeneNode>(kpmGraph.getEndpoints(e)), EdgeType.UNDIRECTED);
                     }
                 }
             }
