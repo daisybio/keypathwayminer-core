@@ -74,7 +74,8 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     public HashMap<String, Double> averagePvalue = new HashMap<String, Double>();
     
     public GeneNode(String nodeId,
-                    String symbol, Map<String, double[]> differenceIntMap,
+                    String symbol,
+                    Map<String, double[]> differenceIntMap,
                     Map<String, Double> pvalue,
                     boolean use_double) {
         this.nodeId = nodeId;

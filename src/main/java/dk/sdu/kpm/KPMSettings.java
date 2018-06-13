@@ -78,6 +78,7 @@ public class KPMSettings {
     // CASE_EXCEPTIONS_MAP
     // NOTE2: Will only be used if MULTI == True
     public volatile Map<String, String> MATRIX_FILES_MAP = new HashMap<String, String>();
+    public volatile boolean MATRIX_FILES_HAVE_HEADER = false;
 
     // Map storing the paths to the multiple p-value (=expression) files
     // NOTE1: The key ID's must be the same as the key ID's in

@@ -21,6 +21,10 @@ import java.io.Serializable;
 
 public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements Serializable {
 
+    public double getPval() {
+        return pval;
+    }
+
     private double pval = 1.0;
 
     public double getTestStatistics() {
@@ -52,9 +56,19 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
             randomNodeIndex = rand.nextInt(candidates.size());
             nextNode = candidates.get(randomNodeIndex);
             //if node can be added, remove node from candidate list, but add all neighbours
+            // do not sample nodes not contained in the expression data
             if (this.addVertex(nextNode)) {
                 candidates.remove(randomNodeIndex);
                 candidates.addAll(kpmGraph.getNeighbors(nextNode));
+                // TODO. random
+                ArrayList<GeneNode> remo = new ArrayList<>();
+                for (GeneNode n: candidates){
+                    String s = n.nodeId;
+                    if(kpmGraph.getBackGenesMap().get(kpmGraph.getBackGenesMap().keySet().toArray()[0]).contains(n.nodeId)){
+                        remo.add(n);
+                    }
+                }
+                candidates.removeAll(remo);
                 i++;
                 // add all edges for the newly created node
                 for (GeneEdge e : kpmGraph.getOutEdges(nextNode)) {
@@ -76,22 +90,32 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     }
 
     private int calculatePvalFisher() {
-        int nrTests = 0;
         double sumOfLogPvals = 0;
         for (GeneNode n : this.getVertices()) {
-            nrTests++;
             // TODO: Currently random value is chosen
             String akey = n.averagePvalue.keySet().toArray(new String[n.averagePvalue.keySet().size()])[0];
             sumOfLogPvals += Math.log(n.averagePvalue.get(akey));
+            if(Double.isInfinite(Math.log(n.averagePvalue.get(akey)))){
+                System.out.println(n.nodeId);
+            }
+
         }
         double testStat = -2 * sumOfLogPvals;
         this.testStatistics = testStat;
-        return nrTests;
+        int deg = 2*this.getVertices().size();
+        significanceTest(deg, this.testStatistics, 0.05);
+        //System.out.println(is_significant);
+        return this.getVertices().size();
     }
 
     private void significanceTest(int degFreedom, double testStatistics, double significanceLevel) {
         ChiSquaredDistribution chiSquare = new ChiSquaredDistribution(degFreedom);
-        this.pval = chiSquare.cumulativeProbability(pval);
+        if(!Double.isInfinite(testStatistics)) {
+            this.pval = chiSquare.cumulativeProbability(testStatistics);
+        }
+        else{
+            this.pval = 0.0;
+        }
         if (this.pval <= significanceLevel) {
             this.is_significant = true;
         }
