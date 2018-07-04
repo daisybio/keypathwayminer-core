@@ -4,6 +4,8 @@ import dk.sdu.kpm.Combine;
 import dk.sdu.kpm.KPMSettings;
 import edu.uci.ics.jung.graph.SparseGraph;
 
+import org.apache.commons.math3.distribution.RealDistribution;
+import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.mvel2.MVEL;
 
 import java.io.Serializable;
@@ -177,7 +179,8 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
     } 
     
     private void createGraph() {
-        processBackNodes(treatBackNodes);
+        //processBackNodes(treatBackNodes);
+        processBackNodes("uni");
 
         for (String nodeId : expressionIdToNodeMap.keySet()) {
             Map<String, double[]> exprVectors = expressionIdToNodeMap.get(nodeId);
@@ -194,6 +197,9 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
             this.addEdge(edge, nodeIdToGeneNode.get(to), nodeIdToGeneNode.get(from));
         }
 
+        //for (GeneNode n: this.getVertices()){
+          //  System.out.println(n.averagePvalue);
+        //}
 
 
 //        for (String nodeId: expressionIdToNodeMap.keySet()) {
@@ -441,19 +447,47 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
         if (treat == IN_POSITIVE) {
             fill = 1;
         }
+        fillBacknodens(fill, null);
+    }
+
+    public void processBackNodes(String distrib){
+        if(distrib.equals("uni")){
+            UniformRealDistribution d = new UniformRealDistribution();
+            fillBacknodens(-1, d);
+        }
+    }
+
+
+    public void processBackNodes(double fill) {
+        fillBacknodens(fill, null);
+    }
+
+
+    public void fillBacknodens(double fill, UniformRealDistribution d){
         for (String nodeId : backNodesMap.keySet()) {
             Set<String> expSet = backNodesMap.get(nodeId);
             Map<String, double[]> expVectors = new HashMap<>();
             if (expressionIdToNodeMap.containsKey(nodeId)) {
                 expVectors = expressionIdToNodeMap.get(nodeId);
             }
-
-            for (String expId : expSet) {
-                double[] exp = new double[numCasesMap.get(expId)];
-                Arrays.fill(exp, fill);
-                expVectors.put(expId, exp);
+            else {
+                // fill expression with 1 value
+                if (fill != -1) {
+                    for (String expId : expSet) {
+                        double[] exp = new double[numCasesMap.get(expId)];
+                        Arrays.fill(exp, fill);
+                        expVectors.put(expId, exp);
+                    }
+                }
+                // sample from a distribution: eg. uniform [0,1[ which is more realisitc for gene expression pvals
+                else {
+                    for (String expId : expSet) {
+                        double[] exp = new double[numCasesMap.get(expId)];
+                        Arrays.fill(exp, d.sample());
+                        expVectors.put(expId, exp);
+                    }
+                }
             }
-
             expressionIdToNodeMap.put(nodeId, expVectors);
             if (!nodeIdToGeneNode.containsKey(nodeId)) {
                 nodeIdToGeneNode.put(nodeId, new GeneNode(nodeId,
@@ -462,9 +496,8 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
                 nodeIdToGeneNode.get(nodeId).setDifferenceIntMap(expVectors);
             }
         }
-
-
     }
+
 
 //    public KPMGraph processSpecialNodes(char treat, Set<String> positiveList, Set<String> negativeList) {
 //        HashMap<String, GeneNode> nodeId2GeneNodeCopy = new HashMap<String, GeneNode>(this.nodeIdToGeneNode);

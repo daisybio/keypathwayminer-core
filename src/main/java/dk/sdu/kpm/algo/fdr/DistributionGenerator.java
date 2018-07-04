@@ -25,27 +25,29 @@ public class DistributionGenerator {
     private int nrSamples;
     private int sizeOfLargest;
     private int sizeOfSmallest;
+    private boolean includeBackground = true;
 
-    public DistributionGenerator(KPMGraph kpmGraph, int nrSamples, int sizeOfSmallest, int sizeOfLargest){
+    public DistributionGenerator(KPMGraph kpmGraph, int nrSamples, int sizeOfSmallest, int sizeOfLargest, boolean includeBackground){
         this.kpmGraph = kpmGraph;
         this.nrSamples = nrSamples;
         this.sizeOfLargest = sizeOfLargest;
         this.sizeOfSmallest = sizeOfSmallest;
         this.distribution = new ArrayList<double[]>();
         this.pdist = new ArrayList<double[]>();
+        this.includeBackground = includeBackground;
 
     }
 
     public void createBackgroundDistribution(){
         int running = sizeOfLargest-sizeOfSmallest;
-        int j = 1;
+        int j = sizeOfSmallest;
         int increment = 1;
         int counter = 0;
-        while(j<=running){
+        while(j<=running+sizeOfSmallest){
             this.distribution.add(new double[this.nrSamples]);
             this.pdist.add(new double[this.nrSamples]);
         for(int i = 0; i<this.nrSamples; i++){
-            RandomSubgraph rs = new RandomSubgraph(this.kpmGraph, j );
+            RandomSubgraph rs = new RandomSubgraph(this.kpmGraph, j, this.includeBackground );
             distribution.get(counter)[i] = rs.getTestStatistics();
             pdist.get(counter)[i] = rs.getPval();
             increment = stepSize(j);
