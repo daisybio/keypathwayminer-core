@@ -112,7 +112,7 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
                 "/home/anne/Documents/Master/MA/Testing/out_new/nodeDist/nodeDistFall.txt");
     }
 
-    private int calculatePvalFisher() {
+    protected int calculatePvalFisher() {
         double sumOfLogPvals = 0;
         int infcounter = 0;
         for (GeneNode n : this.getVertices()) {
@@ -136,6 +136,9 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     }
 
     private void significanceTest(int degFreedom, double testStatistics, double significanceLevel) {
+        if(degFreedom==0){
+            System.out.print("aa");
+        }
         ChiSquaredDistribution chiSquare = new ChiSquaredDistribution(degFreedom);
         if(!Double.isInfinite(testStatistics)) {
             this.pval = 1.0- chiSquare.cumulativeProbability(testStatistics);
@@ -174,6 +177,23 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
             e.printStackTrace(
 
             );
+        }
+    }
+
+    public void writeGraphToFile(String filename){
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename, true))){
+            bw.write("# p-value"+ this.pval+"\n" );
+            bw.write("# Test statistics "+ this.testStatistics+"\n");
+            for(GeneEdge e: this.getEdges()){
+                bw.write(getEndpoints(e).getFirst()+"\tpp\t"+getEndpoints(e).getSecond()+"\n");
+            }
+            for(GeneNode n: this.getVertices()){
+                bw.write(n+"\n");
+            }
+            bw.append("###");
+        }
+        catch (IOException e){
+            e.printStackTrace();
         }
     }
 

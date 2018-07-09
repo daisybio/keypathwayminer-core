@@ -434,7 +434,7 @@ public class LComponentGraph extends SparseGraph<GeneCluster, GeneEdge> {
 	private LCGSubgraph greedyFromStartingNode(GeneCluster startingNode) {
 		if (startingNode.isValid())
 			throw new IllegalArgumentException(
-					"Greedy Solution must start with an exception-node.");
+					"FDRGreedy Solution must start with an exception-node.");
 
 		resetFitnesses();
 		LCGSubgraph solution = new LCGSubgraph(kpmSettings);

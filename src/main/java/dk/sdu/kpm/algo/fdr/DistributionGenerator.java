@@ -1,39 +1,45 @@
 package dk.sdu.kpm.algo.fdr;
 
 import dk.sdu.kpm.graph.KPMGraph;
+import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
+import org.apache.commons.math3.analysis.interpolation.UnivariateInterpolator;
+import org.apache.commons.math3.stat.Frequency;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Random;
+import java.util.*;
 
 public class DistributionGenerator {
 
     private KPMGraph kpmGraph;
 
-    public ArrayList<double[]> getDistribution() {
+    public HashMap<Integer,double[]> getDistribution() {
         return distribution;
     }
 
-    public ArrayList<double[]> getPdist() {
+    public HashMap<Integer,double[]> getPdist() {
         return pdist;
     }
 
-    private ArrayList<double[]> distribution;
-    private ArrayList<double []> pdist;
+    private HashMap<Integer,double[]> distribution;
+    private HashMap<Integer,double[]> pdist;
     private int nrSamples;
     private int sizeOfLargest;
     private int sizeOfSmallest;
     private boolean includeBackground = true;
+    private double fdr = 0.05;
+    protected double[] thresholds;
+    Integer[] sizes;
 
     public DistributionGenerator(KPMGraph kpmGraph, int nrSamples, int sizeOfSmallest, int sizeOfLargest, boolean includeBackground){
         this.kpmGraph = kpmGraph;
         this.nrSamples = nrSamples;
         this.sizeOfLargest = sizeOfLargest;
         this.sizeOfSmallest = sizeOfSmallest;
-        this.distribution = new ArrayList<double[]>();
-        this.pdist = new ArrayList<double[]>();
+        this.distribution = new HashMap<Integer, double[]>();
+        this.pdist = new HashMap<Integer,double[]>();
         this.includeBackground = includeBackground;
 
     }
@@ -44,18 +50,28 @@ public class DistributionGenerator {
         int increment = 1;
         int counter = 0;
         while(j<=running+sizeOfSmallest){
-            this.distribution.add(new double[this.nrSamples]);
-            this.pdist.add(new double[this.nrSamples]);
+            this.distribution.put(j, new double[this.nrSamples]);
+            this.pdist.put(j,new double[this.nrSamples]);
         for(int i = 0; i<this.nrSamples; i++){
             RandomSubgraph rs = new RandomSubgraph(this.kpmGraph, j, this.includeBackground );
-            distribution.get(counter)[i] = rs.getTestStatistics();
-            pdist.get(counter)[i] = rs.getPval();
+            distribution.get(j)[i] = rs.getTestStatistics();
+            pdist.get(j)[i] = rs.getPval();
             increment = stepSize(j);
+            //increment = stepSize();
 
         }
         j+=increment;
         counter++;
         }
+        for(int i :this.distribution.keySet()){
+            Arrays.sort(distribution.get(i));
+
+        }
+        for(int i :this.pdist.keySet()){
+            Arrays.sort(pdist.get(i));
+
+        }
+        allThresholds();
     }
 
     /*
@@ -76,14 +92,17 @@ public class DistributionGenerator {
         }
         return stepSize;
     }
+    public static int stepSize(){
+        return 1;
+    }
 
 
-    public void writeDistributionToFile(String filename, ArrayList<double[]> distribution){
+    public void writeDistributionToFile(String filename, HashMap<Integer,double[]> distribution){
         // use append to write different distributions to the same file
         try(BufferedWriter bw = new BufferedWriter(new FileWriter(filename))){
             //bw.write(nrSamples+"\t"+distribution.length+"\t");
             int counter = 0;
-            for (int j = 0; j< distribution.size(); j++) {
+            for (int j : distribution.keySet()) {
                 int size = this.sizeOfSmallest+counter;
                 bw.write(size+"\t");
                 counter+=stepSize(j);
@@ -97,7 +116,62 @@ public class DistributionGenerator {
             ioe.printStackTrace();
         }
     }
+    protected double getThreshold( int networkSize){
+        // Arrays are already sorted
+        if(networkSize<=thresholds.length) {
+            return thresholds[networkSize];
+        }
+        else{
+            return 1.0;
+        }
+    }
 
 
+    private void allThresholds(){
+        double[] thresholds = new double[this.pdist.size()];
+        // index = % of all random networks
+        int index = (int)Math.floor(this.fdr*nrSamples);
+        int counter = 0;
+        Integer[] indices = this.pdist.keySet().toArray(new Integer[this.pdist.size()]);
+        Arrays.sort(indices);
+        for(Integer i : indices){
+            double thresh = this.pdist.get(i)[index];
+            thresholds[counter] = thresh;
+            counter ++;
+        }
+
+            this.thresholds = thresholds;
+            this.sizes = indices;
+            interpolateThreshold();
+
+    }
+
+    public void interpolateThreshold(){
+        double[] result = new double[sizes[sizes.length-1]];
+        double[] x = new double[thresholds.length];
+        for(int i = 0; i<x.length; i++){
+            x[i]=(double)this.sizes[i].intValue();
+        }
+        UnivariateInterpolator interpolator = new SplineInterpolator();
+        UnivariateFunction function = interpolator.interpolate(x, thresholds);
+
+        double last = 1.0;
+        for (int i = 0; i<x.length; i++) {
+            while(x[i]-last>=1) {
+                double interpolatedY = function.value(last);
+                result[(int)last] = interpolatedY;
+                last++;
+            }
+            result[(int)last-1] = thresholds[i];
+            //last = i+1.0;
+        }
+        this.thresholds = result;
+    }
+    public double[] getThresholds(){
+        return this.thresholds;
+    }
+    public Integer[] getSizes(){
+        return this.sizes;
+    }
 
 }

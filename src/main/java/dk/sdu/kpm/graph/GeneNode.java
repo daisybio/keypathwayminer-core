@@ -60,9 +60,9 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
         return pvalue;
     }
 
-    private Map<String, Double> pvalue;
+    private  Map<String, Double> pvalue;
 
-    public HashMap<String, Double> getAveragePvalue() {
+    public  HashMap<String, Double> getAveragePvalue() {
         return averagePvalue;
     }
 
@@ -71,7 +71,7 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     // Average p-value is calculated per gene from the samples
     // Must not actually be p-values
     // For each Dataset an separate average is calculated
-    public HashMap<String, Double> averagePvalue = new HashMap<String, Double>();
+    public volatile HashMap<String, Double> averagePvalue = new HashMap<String, Double>();
     
     public GeneNode(String nodeId,
                     String symbol,
@@ -106,7 +106,8 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     	this.numDownExpressedCasesMap = new HashMap<String, Integer>(n.numDownExpressedCasesMap);
     	this.numNoDiffExpressedCasesMap = new HashMap<String, Integer>(n.numNoDiffExpressedCasesMap);
     	this.numCasesMap = new HashMap<String, Integer>(n.numCasesMap);
-    	this.pvalue = n.pvalue;
+    	//this.pvalue = new HashMap<String, Double>(n.pvalue);
+    	this.averagePvalue = new HashMap<String, Double>(n.averagePvalue);
     	this.use_double = n.use_double;
     }
     

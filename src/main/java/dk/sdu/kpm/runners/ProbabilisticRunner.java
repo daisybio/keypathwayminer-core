@@ -4,6 +4,7 @@ import dk.sdu.kpm.AlgoComputations;
 import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.RunStats;
 import dk.sdu.kpm.algo.fdr.DistributionGenerator;
+import dk.sdu.kpm.algo.fdr.RandomSubgraph;
 import dk.sdu.kpm.charts.ChartInput;
 import dk.sdu.kpm.charts.IChart;
 import dk.sdu.kpm.charts.StandardCharts;
@@ -17,7 +18,9 @@ import dk.sdu.kpm.results.StandardResultSet;
 import dk.sdu.kpm.taskmonitors.IKPMTaskMonitor;
 import dk.sdu.kpm.validation.NodeOverlapCounter;
 import dk.sdu.kpm.validation.ValidationOverlapResult;
+import java.io.*;
 
+import java.io.FileWriter;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.logging.Level;
@@ -64,10 +67,36 @@ public class ProbabilisticRunner implements Runnable {
         //dg.createBackgroundDistribution();
         //dg.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out/dist/distribution.txt", dg.getDistribution());
        // dg.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out/dist/pdistribution.txt", dg.getPdist());
-        DistributionGenerator dg1 = new DistributionGenerator(this.kpmSettings.MAIN_GRAPH, 1000, 1,100, false);
+        DistributionGenerator dg1 = new DistributionGenerator(this.kpmSettings.MAIN_GRAPH, 100, 1,100, false);
         dg1.createBackgroundDistribution();
-        dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out_new/dist/distributionFall.txt", dg1.getDistribution());
-        dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out_new/dist/pdistributionFall.txt", dg1.getPdist());
+        //dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out_new/dist/distributionFall.txt", dg1.getDistribution());
+        //dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out_new/dist/pdistributionFall.txt", dg1.getPdist());
+        taskMonitor.setStatusMessage("Refreshing graph...");
+        kpmSettings.MAIN_GRAPH.refreshGraph(kpmSettings);
+        taskMonitor.setStatusMessage("Searching and extracting pathways...");
+        long start = System.currentTimeMillis();
+
+        try(BufferedWriter bw = new BufferedWriter(new FileWriter("/home/anne/Documents/Master/MA/Testing/out_new/thresholds.txt"))) {
+            for (int d = 0; d<dg1.getThresholds().length; d++) {
+                bw.write("\t"+dg1.getThresholds()[d]+"\n");
+            }
+
+
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
+        System.out.print(this.kpmSettings.toString());
+        List<Result> results = new AlgoComputations().run(kpmSettings.ALGO, kpmSettings.MAIN_GRAPH, taskMonitor, kpmSettings, dg1);
+
+        long end = System.currentTimeMillis();
+        kpmSettings.TOTAL_RUNNING_TIME = (end - start) / 1000;
+        for(Result res: results){
+            if(res instanceof RandomSubgraph && ((RandomSubgraph) res).getVertices().size()>1){
+                ((RandomSubgraph) res).writeGraphToFile("/home/anne/Documents/Master/MA/Testing/out_new/graph_out/file.txt");
+            }
+        }
+
     }
 
 }

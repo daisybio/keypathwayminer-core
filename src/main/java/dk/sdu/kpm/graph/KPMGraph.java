@@ -154,6 +154,7 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
         negativeList = new HashSet<String>(g.negativeList);
         this.nodeIdToPvalue = g.nodeIdToPvalue;
         this.use_double = g.use_double;
+
         
         // Ensure we copy the vertices.
         for (GeneNode node : g.getVertices()) {
@@ -191,6 +192,10 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
         for (String[] pair : edgeList) {
             String from = pair[0];
             String to = pair[1];
+            // Remove self edges
+            if(from.equals(to)) {
+                continue;
+            }
             // Modified ID to be more compatible with cytoscape id's
             String edgeId = to + " (pp) " + from;
             GeneEdge edge = new GeneEdge(edgeId);

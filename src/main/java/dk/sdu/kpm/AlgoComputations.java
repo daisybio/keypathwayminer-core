@@ -1,19 +1,19 @@
 package dk.sdu.kpm;
 
+import dk.sdu.kpm.algo.fdr.DistributionGenerator;
+import dk.sdu.kpm.algo.fdr.FDRGreedy;
 import dk.sdu.kpm.algo.glone.ACO;
 import dk.sdu.kpm.algo.glone.Greedy;
 import dk.sdu.kpm.algo.glone.Optimal;
 import dk.sdu.kpm.algo.ines.GeneCluster;
 import dk.sdu.kpm.algo.ines.GraphProcessing;
 import dk.sdu.kpm.algo.ines.LComponentGraph;
-import dk.sdu.kpm.graph.GeneNode;
 import dk.sdu.kpm.graph.KPMGraph;
 import dk.sdu.kpm.graph.Result;
 import dk.sdu.kpm.logging.KpmLogger;
 import dk.sdu.kpm.taskmonitors.IKPMTaskMonitor;
 import dk.sdu.kpm.taskmonitors.KPMDummyTaskMonitor;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -23,11 +23,13 @@ import java.util.logging.Level;
 public class AlgoComputations {
 
     private LComponentGraph lcg = null;
-    private Greedy greedy = null;
+    private dk.sdu.kpm.algo.glone.Greedy greedy = null;
     private Optimal opt = null;
     private ACO aco = null;
+    private FDRGreedy fdr = null;
 
-    public List<Result> run(Algo algo, KPMGraph g, IKPMTaskMonitor taskMonitor, KPMSettings settings) {
+    // TODO: modify run such that distribution generator not part of the paramters, overload?, add dg to kpmSettings?
+    public List<Result> run(Algo algo, KPMGraph g, IKPMTaskMonitor taskMonitor, KPMSettings settings, DistributionGenerator dg) {
 
         List<Result> results = null;
 
@@ -76,6 +78,12 @@ public class AlgoComputations {
                     aco = new ACO(g, taskMonitor, settings);
                     results = aco.runACO();
                     aco = null;
+                    break;
+
+                case FDR:
+                    fdr = new FDRGreedy(g, taskMonitor, settings, dg);
+                    results = fdr.runGreedy();
+                    fdr = null;
                     break;
 
                 default:
