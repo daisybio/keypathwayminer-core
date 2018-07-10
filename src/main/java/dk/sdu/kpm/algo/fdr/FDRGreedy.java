@@ -71,19 +71,32 @@ public class FDRGreedy implements Serializable {
         // TODO: make the concurrent execution more efficient
         int counter = 0;
         visited =  new ConcurrentHashMap<GeneNode, Boolean>();
-        for (final GeneNode node : g.getVertices()) {
+
+        GeneNode n = null;
+        Iterator it = g.getVertices().iterator();
+        while(it.hasNext()){
+            n = (GeneNode)it.next();
+            if(n.nodeId.equals("208")){
+                break;
+            }
+        }
+        fromStartingNode(n);
+        fromStartingNode(n);
+
+        /*for (final GeneNode node : g.getVertices()) {
             visited.put(node, false);
             if (checkFitness(node)) {
-            futures.add(pool.submit(new Callable<Result>() {
+            /*futures.add(pool.submit(new Callable<Result>() {
 
                 @Override
                 public Result call() throws Exception {
                     return fromStartingNode(node);
                 }
             }));
+            //fromStartingNode(node);
                 counter++;
         }
-    }
+    }*/
 
         for (Future<Result> f : futures) {
             Result r;
@@ -109,33 +122,38 @@ public class FDRGreedy implements Serializable {
     }
 
     private Result fromStartingNode(GeneNode startingNode) {
-        if(visited.get(startingNode)){
-            return null;
-        }
+        //if(visited.get(startingNode)){
+         //   return null;
+        //}
         //slow and unnecessary, can be final
         //KPMGraph copy = new KPMGraph(this.g);
-        RandomSubgraph solution = new RandomSubgraph(copy);
-        // starting node can be added
+        RandomSubgraph solution = new RandomSubgraph();
+        // starting node can be addedKPMGraph kpmGraph
         //GeneNode st = new GeneNode(startingNode);
-        HashSet<GeneNode> candidates = new HashSet<GeneNode>();
+        ArrayList<GeneNode> candidates = new ArrayList<GeneNode>();
         HashSet<GeneNode> queried = new HashSet<GeneNode>();
         candidates.addAll(copy.getNeighbors(startingNode));
+        candidates.sort(new Comparator<GeneNode>() {
+            @Override
+            public int compare(GeneNode o1, GeneNode o2) {
+                return o1.nodeId.compareTo(o2.nodeId);
+            }
+        });
 
         if (solution.addVertex(startingNode)) {
-            visited.put(startingNode, true);
+            //visited.put(startingNode, true);
             queried.add(startingNode);
 
             boolean condition = true;
             while (condition) {
                 ArrayList<GeneNode> checked = new ArrayList<GeneNode>();
-                ArrayList<GeneNode> temp = new ArrayList<GeneNode>();
+                HashSet<GeneNode> temp = new HashSet<GeneNode>();
                 for (GeneNode g : candidates) {
                     if (checkFitness(g)) {
                         solution.addVertex(g);
-
-
                         if (checkFitness(solution)) {
                             // Add edges for newly created node
+                            System.out.println(g.nodeId);
                             for (GeneEdge e : copy.getOutEdges(g)) {
                                 if (solution.containsVertex(copy.getEndpoints(e).getFirst()) &&
                                         solution.containsVertex(copy.getEndpoints(e).getSecond())) {
@@ -148,10 +166,28 @@ public class FDRGreedy implements Serializable {
                         }
 
                     }
+                    /*312
+                    699
+                    1425
+                    616
+                    258
+                    197
+                    37
+                    0
+                    208	50
+                    312
+                    699
+                    1425
+                    616
+                    258
+                    197
+                    37
+                    0*/
                     checked.add(g);
                     queried.add(g);
-                    visited.put(g, true);
+                    //visited.put(g, true);
                 }
+                //System.out.println(temp.size());
                 for (GeneNode tmpN : temp) {
                     if (!queried.contains(tmpN)) {
                         candidates.add(tmpN);
@@ -164,9 +200,17 @@ public class FDRGreedy implements Serializable {
                 if(candidates.size()==0){
                     condition=false;
                 }
+                candidates.sort(new Comparator<GeneNode>() {
+                    @Override
+                    public int compare(GeneNode o1, GeneNode o2) {
+                        return o1.nodeId.compareTo(o2.nodeId);
+                    }
+                });
+
+
             }
         }
-        System.out.println(solution.getVertices().size());
+        System.out.println(startingNode.nodeId+"\t"+solution.getVertices().size());
         return solution;
     }
 
@@ -190,8 +234,8 @@ public class FDRGreedy implements Serializable {
     private boolean checkFitness(RandomSubgraph sg){
         boolean fit = false;
         // TODO insert individual threshold for network size here
-        if(sg.getVertices().size()>10){
-            return true;
+        if(sg.getVertices().size()>=dg.getThresholds().length){
+            return false;
         }
         // refresh P value of subnetwork
         sg.calculatePvalFisher();

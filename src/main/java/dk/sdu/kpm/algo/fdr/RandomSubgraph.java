@@ -12,6 +12,7 @@ import org.apache.commons.math3.distribution.ChiSquaredDistribution;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.Buffer;
 import java.util.*;
 import java.io.FileWriter;
 
@@ -50,14 +51,17 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     /*
     * This constructor will be used by the Algorithm to generate candidate networks
      */
-    public RandomSubgraph(KPMGraph kpmGraph){
-
+    public RandomSubgraph(){
+    super();
     }
 
     private void generateRandomSizeN(KPMGraph kpmGraph, int size, boolean includeBackgroundNodes) {
-        Random rand = new Random();
+        Random rand = new Random(11011994);
         int randomNodeIndex;
         GeneNode[] nodes = kpmGraph.getVertices().toArray(new GeneNode[kpmGraph.getVertices().size()]);
+        // TODO Array sorting for deterministic behaviour?
+        // Order lexicographically - nodeId
+        //Arrays.sort(nodes);
         GeneNode nextNode = null;
 
         boolean first = false;
@@ -136,9 +140,6 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     }
 
     private void significanceTest(int degFreedom, double testStatistics, double significanceLevel) {
-        if(degFreedom==0){
-            System.out.print("aa");
-        }
         ChiSquaredDistribution chiSquare = new ChiSquaredDistribution(degFreedom);
         if(!Double.isInfinite(testStatistics)) {
             this.pval = 1.0- chiSquare.cumulativeProbability(testStatistics);
@@ -180,21 +181,24 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         }
     }
 
-    public void writeGraphToFile(String filename){
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename, true))){
-            bw.write("# p-value"+ this.pval+"\n" );
-            bw.write("# Test statistics "+ this.testStatistics+"\n");
-            for(GeneEdge e: this.getEdges()){
-                bw.write(getEndpoints(e).getFirst()+"\tpp\t"+getEndpoints(e).getSecond()+"\n");
+    public void writeGraphToFile(String filename, String name){
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename+".graph", true));
+                 BufferedWriter stat = new BufferedWriter(new FileWriter(filename+".stat"))){
+                // file for test p value and teststatistics for each solution
+                stat.write(name+"\t"+this.pval + "\t"+ this.testStatistics + "\n");
+
+                //write graph to file in sif format
+                for (GeneEdge e : this.getEdges()) {
+                    bw.write(name +"\t"+getEndpoints(e).getFirst() + "\tpp\t" + getEndpoints(e).getSecond() + "\n");
+                }
+                // separate entries for each node
+                //for (GeneNode n : this.getVertices()) {
+                  //  bw.write(name +"\t"+n + "\n");
+                //}
+                //bw.append("###");
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            for(GeneNode n: this.getVertices()){
-                bw.write(n+"\n");
-            }
-            bw.append("###");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
     }
 
     @Override

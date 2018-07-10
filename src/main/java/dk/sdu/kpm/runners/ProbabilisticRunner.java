@@ -75,8 +75,8 @@ public class ProbabilisticRunner implements Runnable {
         kpmSettings.MAIN_GRAPH.refreshGraph(kpmSettings);
         taskMonitor.setStatusMessage("Searching and extracting pathways...");
         long start = System.currentTimeMillis();
-
-        try(BufferedWriter bw = new BufferedWriter(new FileWriter("/home/anne/Documents/Master/MA/Testing/out_new/thresholds.txt"))) {
+        long now = System.currentTimeMillis();
+        try(BufferedWriter bw = new BufferedWriter(new FileWriter("/home/anne/Documents/Master/MA/Testing/out_new/"+now+"thresholds.txt"))) {
             for (int d = 0; d<dg1.getThresholds().length; d++) {
                 bw.write("\t"+dg1.getThresholds()[d]+"\n");
             }
@@ -91,9 +91,12 @@ public class ProbabilisticRunner implements Runnable {
 
         long end = System.currentTimeMillis();
         kpmSettings.TOTAL_RUNNING_TIME = (end - start) / 1000;
+        int counter = 0;
+
         for(Result res: results){
             if(res instanceof RandomSubgraph && ((RandomSubgraph) res).getVertices().size()>1){
-                ((RandomSubgraph) res).writeGraphToFile("/home/anne/Documents/Master/MA/Testing/out_new/graph_out/file.txt");
+                ((RandomSubgraph) res).writeGraphToFile("/home/anne/Documents/Master/MA/Testing/out_new/graph_out/"+now+"file", "graph"+counter);
+                counter++;
             }
         }
 

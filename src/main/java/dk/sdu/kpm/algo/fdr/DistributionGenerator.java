@@ -116,10 +116,10 @@ public class DistributionGenerator {
             ioe.printStackTrace();
         }
     }
-    protected double getThreshold( int networkSize){
+    protected double getThreshold(int networkSize){
         // Arrays are already sorted
         if(networkSize<=thresholds.length) {
-            return thresholds[networkSize];
+            return thresholds[networkSize-1];
         }
         else{
             return 1.0;
@@ -151,19 +151,22 @@ public class DistributionGenerator {
         double[] x = new double[thresholds.length];
         for(int i = 0; i<x.length; i++){
             x[i]=(double)this.sizes[i].intValue();
+
         }
         UnivariateInterpolator interpolator = new SplineInterpolator();
         UnivariateFunction function = interpolator.interpolate(x, thresholds);
 
         double last = 1.0;
         for (int i = 0; i<x.length; i++) {
-            while(x[i]-last>=1) {
+            System.out.println(last);
+            while(x[i]-last>0) {
                 double interpolatedY = function.value(last);
-                result[(int)last] = interpolatedY;
+                result[(int)last-1] = interpolatedY;
                 last++;
+                System.out.println(last);
             }
             result[(int)last-1] = thresholds[i];
-            //last = i+1.0;
+            last = last+1.0;
         }
         this.thresholds = result;
     }
