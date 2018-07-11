@@ -26,7 +26,7 @@ public class FDRGreedy implements Serializable {
     private final KPMGraph g;
     private final KPMGraph copy;
 
-    public List<Result> allSolutions;
+    public List<Result> allsds;
 
     public IKPMTaskMonitor taskMonitor;
 
@@ -48,7 +48,7 @@ public class FDRGreedy implements Serializable {
     }
 
     public List<Result> getResults() {
-        return allSolutions;
+        return allsds;
     }
 
     public List<Result> runGreedy() {
@@ -72,21 +72,10 @@ public class FDRGreedy implements Serializable {
         int counter = 0;
         visited =  new ConcurrentHashMap<GeneNode, Boolean>();
 
-        GeneNode n = null;
-        Iterator it = g.getVertices().iterator();
-        while(it.hasNext()){
-            n = (GeneNode)it.next();
-            if(n.nodeId.equals("208")){
-                break;
-            }
-        }
-        fromStartingNode(n);
-        fromStartingNode(n);
-
-        /*for (final GeneNode node : g.getVertices()) {
+       for (final GeneNode node : g.getVertices()) {
             visited.put(node, false);
             if (checkFitness(node)) {
-            /*futures.add(pool.submit(new Callable<Result>() {
+            futures.add(pool.submit(new Callable<Result>() {
 
                 @Override
                 public Result call() throws Exception {
@@ -96,7 +85,8 @@ public class FDRGreedy implements Serializable {
             //fromStartingNode(node);
                 counter++;
         }
-    }*/
+    }
+
 
         for (Future<Result> f : futures) {
             Result r;
@@ -125,22 +115,22 @@ public class FDRGreedy implements Serializable {
         //if(visited.get(startingNode)){
          //   return null;
         //}
-        //slow and unnecessary, can be final
-        //KPMGraph copy = new KPMGraph(this.g);
-        RandomSubgraph solution = new RandomSubgraph();
+        RandomSubgraph sd = new RandomSubgraph(startingNode);
+
+        //RandomSubgraph sol = new RandomSubgraph(startingNode);
         // starting node can be addedKPMGraph kpmGraph
         //GeneNode st = new GeneNode(startingNode);
         ArrayList<GeneNode> candidates = new ArrayList<GeneNode>();
         HashSet<GeneNode> queried = new HashSet<GeneNode>();
         candidates.addAll(copy.getNeighbors(startingNode));
+
         candidates.sort(new Comparator<GeneNode>() {
-            @Override
+         @Override
             public int compare(GeneNode o1, GeneNode o2) {
                 return o1.nodeId.compareTo(o2.nodeId);
-            }
+           }
         });
-
-        if (solution.addVertex(startingNode)) {
+        //if (sd.addVertex(startingNode)) {
             //visited.put(startingNode, true);
             queried.add(startingNode);
 
@@ -149,43 +139,24 @@ public class FDRGreedy implements Serializable {
                 ArrayList<GeneNode> checked = new ArrayList<GeneNode>();
                 HashSet<GeneNode> temp = new HashSet<GeneNode>();
                 for (GeneNode g : candidates) {
+
                     if (checkFitness(g)) {
-                        solution.addVertex(g);
-                        if (checkFitness(solution)) {
+                        boolean b = sd.addVertex(g);
+                        if (checkFitness(sd)) {
                             // Add edges for newly created node
-                            System.out.println(g.nodeId);
                             for (GeneEdge e : copy.getOutEdges(g)) {
-                                if (solution.containsVertex(copy.getEndpoints(e).getFirst()) &&
-                                        solution.containsVertex(copy.getEndpoints(e).getSecond())) {
-                                    solution.addEdge(e, new Pair<GeneNode>(copy.getEndpoints(e)), EdgeType.UNDIRECTED);
+                                if (sd.containsVertex(copy.getEndpoints(e).getFirst()) &&
+                                        sd.containsVertex(copy.getEndpoints(e).getSecond())) {
+                                    sd.addEdge(e, new Pair<GeneNode>(copy.getEndpoints(e)), EdgeType.UNDIRECTED);
                                 }
                             }
                             temp.addAll(copy.getNeighbors(g));
                         } else {
-                            solution.removeVertex(g);
+                            sd.removeVertex(g);
                         }
-
-                    }
-                    /*312
-                    699
-                    1425
-                    616
-                    258
-                    197
-                    37
-                    0
-                    208	50
-                    312
-                    699
-                    1425
-                    616
-                    258
-                    197
-                    37
-                    0*/
+                }
                     checked.add(g);
                     queried.add(g);
-                    //visited.put(g, true);
                 }
                 //System.out.println(temp.size());
                 for (GeneNode tmpN : temp) {
@@ -194,7 +165,7 @@ public class FDRGreedy implements Serializable {
                     }
                 }
                 candidates.removeAll(checked);
-                if(!checkFitness(solution)){
+                if(!checkFitness(sd)){
                     condition = false;
                 }
                 if(candidates.size()==0){
@@ -207,11 +178,9 @@ public class FDRGreedy implements Serializable {
                     }
                 });
 
-
             }
-        }
-        System.out.println(startingNode.nodeId+"\t"+solution.getVertices().size());
-        return solution;
+       // }
+        return sd;
     }
 
     private boolean checkFitness(GeneNode n){
@@ -219,12 +188,14 @@ public class FDRGreedy implements Serializable {
         // TODO: currently a random p value is chosen
         String akey = n.getAveragePvalue().keySet().
                 toArray(new String[n.getAveragePvalue().keySet().size()])[0];
-        if((n.getAveragePvalue().get(akey)-0.05)<=0.00000000000000001){
+        if(n.getAveragePvalue().get(akey)<=0.05){
             fit = true;
+            //System.out.println(n.nodeId+"\t"+fit);
         }
         else{
             fit = false;
         }
+
         return fit;
     }
 
@@ -240,12 +211,13 @@ public class FDRGreedy implements Serializable {
         // refresh P value of subnetwork
         sg.calculatePvalFisher();
         // subnetwork pvalue must be smaller than threshold
-        if(sg.getPval()- dg.getThreshold(sg.getVertexCount())<0.0000000000000001){
+        if(sg.getPval()- dg.getThreshold(sg.getVertexCount())<0.0000000000000000000001){
             fit = true;
         }
         else{
             fit = false;
         }
+        //System.out.println(fit);
         return fit;
     }
 

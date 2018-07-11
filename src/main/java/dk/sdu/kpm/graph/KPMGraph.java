@@ -181,7 +181,8 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
     
     private void createGraph() {
         //processBackNodes(treatBackNodes);
-        processBackNodes("uni");
+        //processBackNodes("uni");
+        processBackNodes(1.0);
 
         for (String nodeId : expressionIdToNodeMap.keySet()) {
             Map<String, double[]> exprVectors = expressionIdToNodeMap.get(nodeId);

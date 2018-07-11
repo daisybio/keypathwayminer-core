@@ -158,12 +158,10 @@ public class DistributionGenerator {
 
         double last = 1.0;
         for (int i = 0; i<x.length; i++) {
-            System.out.println(last);
             while(x[i]-last>0) {
                 double interpolatedY = function.value(last);
                 result[(int)last-1] = interpolatedY;
                 last++;
-                System.out.println(last);
             }
             result[(int)last-1] = thresholds[i];
             last = last+1.0;

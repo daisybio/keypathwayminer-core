@@ -51,8 +51,10 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     /*
     * This constructor will be used by the Algorithm to generate candidate networks
      */
-    public RandomSubgraph(){
-    super();
+
+    public RandomSubgraph(GeneNode node){
+    //super();
+    this.addVertex(node);
     }
 
     private void generateRandomSizeN(KPMGraph kpmGraph, int size, boolean includeBackgroundNodes) {
@@ -122,6 +124,9 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         for (GeneNode n : this.getVertices()) {
             // TODO: Currently random value is chosen
             String akey = n.averagePvalue.keySet().toArray(new String[n.averagePvalue.keySet().size()])[0];
+            if(!akey.equals("L1")){
+                System.out.println("not L1");
+            }
             sumOfLogPvals += Math.log(n.averagePvalue.get(akey));
 
             if(Double.isInfinite(Math.log(n.averagePvalue.get(akey)))){

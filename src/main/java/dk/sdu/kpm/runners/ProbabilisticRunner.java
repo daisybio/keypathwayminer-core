@@ -67,7 +67,7 @@ public class ProbabilisticRunner implements Runnable {
         //dg.createBackgroundDistribution();
         //dg.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out/dist/distribution.txt", dg.getDistribution());
        // dg.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out/dist/pdistribution.txt", dg.getPdist());
-        DistributionGenerator dg1 = new DistributionGenerator(this.kpmSettings.MAIN_GRAPH, 100, 1,100, false);
+        DistributionGenerator dg1 = new DistributionGenerator(this.kpmSettings.MAIN_GRAPH, 10, 1,100, false);
         dg1.createBackgroundDistribution();
         //dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out_new/dist/distributionFall.txt", dg1.getDistribution());
         //dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out_new/dist/pdistributionFall.txt", dg1.getPdist());
