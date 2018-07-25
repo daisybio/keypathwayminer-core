@@ -56,11 +56,12 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     
     private boolean isValid;
 
-    public Map<String, Double> getPvalue() {
+    public double getPvalue() {
         return pvalue;
     }
 
-    private  Map<String, Double> pvalue;
+    //TODO: change to map for multiple datasets
+    private  double pvalue;
 
     public  HashMap<String, Double> getAveragePvalue() {
         return averagePvalue;
@@ -76,7 +77,7 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     public GeneNode(String nodeId,
                     String symbol,
                     Map<String, double[]> differenceIntMap,
-                    Map<String, Double> pvalue,
+                    double pvalue,
                     boolean use_double) {
         this.nodeId = nodeId;
         this.symbol = symbol;
@@ -107,6 +108,7 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
     	this.numNoDiffExpressedCasesMap = new HashMap<String, Integer>(n.numNoDiffExpressedCasesMap);
     	this.numCasesMap = new HashMap<String, Integer>(n.numCasesMap);
     	//this.pvalue = new HashMap<String, Double>(n.pvalue);
+        this.pvalue = n.pvalue;
     	this.averagePvalue = new HashMap<String, Double>(n.averagePvalue);
     	this.use_double = n.use_double;
     }

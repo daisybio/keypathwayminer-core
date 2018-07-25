@@ -1,7 +1,12 @@
 package dk.sdu.kpm.algo.fdr;
 
+import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.graph.KPMGraph;
+import dk.sdu.kpm.graph.Result;
+import dk.sdu.kpm.taskmonitors.KPMDummyTaskMonitor;
 import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
+import org.apache.commons.math3.analysis.interpolation.LoessInterpolator;
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.interpolation.UnivariateInterpolator;
 import org.apache.commons.math3.stat.Frequency;
@@ -9,6 +14,7 @@ import org.apache.commons.math3.stat.Frequency;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.sql.ResultSet;
 import java.util.*;
 
 public class DistributionGenerator {
@@ -31,9 +37,12 @@ public class DistributionGenerator {
     private boolean includeBackground = true;
     private double fdr = 0.05;
     protected double[] thresholds;
+    protected double [] meanTeststats;
     Integer[] sizes;
+    KPMSettings kpmSettings;
 
-    public DistributionGenerator(KPMGraph kpmGraph, int nrSamples, int sizeOfSmallest, int sizeOfLargest, boolean includeBackground){
+    public DistributionGenerator(KPMGraph kpmGraph, int nrSamples, int sizeOfSmallest, int sizeOfLargest, boolean includeBackground,
+                                 KPMSettings kpmSettings){
         this.kpmGraph = kpmGraph;
         this.nrSamples = nrSamples;
         this.sizeOfLargest = sizeOfLargest;
@@ -41,36 +50,67 @@ public class DistributionGenerator {
         this.distribution = new HashMap<Integer, double[]>();
         this.pdist = new HashMap<Integer,double[]>();
         this.includeBackground = includeBackground;
-
+        this.kpmSettings = kpmSettings;
     }
 
-    public void createBackgroundDistribution(){
+    public double[] getMeanTeststats() {
+        return meanTeststats;
+    }
+
+    public void createBackgroundDistribution(String filename, boolean general){
         int running = sizeOfLargest-sizeOfSmallest;
         int j = sizeOfSmallest;
         int increment = 1;
         int counter = 0;
+
         while(j<=running+sizeOfSmallest){
             this.distribution.put(j, new double[this.nrSamples]);
             this.pdist.put(j,new double[this.nrSamples]);
-        for(int i = 0; i<this.nrSamples; i++){
-            RandomSubgraph rs = new RandomSubgraph(this.kpmGraph, j, this.includeBackground );
-            distribution.get(j)[i] = rs.getTestStatistics();
-            pdist.get(j)[i] = rs.getPval();
+
+            GreedyN greedyN = new GreedyN(kpmGraph, new KPMDummyTaskMonitor(), kpmSettings, general, j, nrSamples);
+
+            List<Result> res = greedyN.runGreedy();
+            int i = 0;
+            for(Result rs: res){
+                RandomSubgraph r = (RandomSubgraph) rs;
+                ((RandomSubgraph) rs).writeToFile(filename+"pvalsSamplewise.txt", filename+"nodeDist.txt", filename+"pvalsGeneral.txt");
+                distribution.get(j)[i] = r.getGeneralTeststat();
+                pdist.get(j)[i] = r.getGeneralPval();
+                i++;
+            }
+            increment = stepSize(j);
+            j+=increment;
+
+
+        /*for(int i = 0; i<this.nrSamples; i++){
+            RandomSubgraph rs = new RandomSubgraph(this.kpmGraph, j, this.includeBackground , filename, kpmSettings);
+            if(!general) {
+                distribution.get(j)[i] = rs.getTestStatistics();
+                pdist.get(j)[i] = rs.getPval();
+            }
+            else{
+                distribution.get(j)[i] = rs.getGeneralTeststat();
+                pdist.get(j)[i] = rs.getGeneralPval();
+            }
             increment = stepSize(j);
             //increment = stepSize();
 
         }
         j+=increment;
         counter++;
+        */
         }
+
         for(int i :this.distribution.keySet()){
             Arrays.sort(distribution.get(i));
 
         }
+
         for(int i :this.pdist.keySet()){
             Arrays.sort(pdist.get(i));
 
         }
+        //System.out.println(counter);
         allThresholds();
     }
 
@@ -87,8 +127,11 @@ public class DistributionGenerator {
         else if(j <= 100){
             stepSize = 5;
         }
-        else{
+        else if(j<=150){
             stepSize = 10;
+        }
+        else{
+            stepSize = 25;
         }
         return stepSize;
     }
@@ -126,8 +169,19 @@ public class DistributionGenerator {
         }
     }
 
+    protected double getMeanTS(int networkSize){
+        // Arrays are already sorted
+        if(networkSize<=meanTeststats.length) {
+            return meanTeststats[networkSize-1];
+        }
+        else{
+            return 0.0;
+        }
+    }
+
 
     private void allThresholds(){
+        meanTeststats = new double[this.distribution.size()];
         double[] thresholds = new double[this.pdist.size()];
         // index = % of all random networks
         int index = (int)Math.floor(this.fdr*nrSamples);
@@ -136,7 +190,9 @@ public class DistributionGenerator {
         Arrays.sort(indices);
         for(Integer i : indices){
             double thresh = this.pdist.get(i)[index];
+            double t = this.distribution.get(i)[index];
             thresholds[counter] = thresh;
+            meanTeststats[counter] = t;
             counter ++;
         }
 
@@ -148,26 +204,36 @@ public class DistributionGenerator {
 
     public void interpolateThreshold(){
         double[] result = new double[sizes[sizes.length-1]];
+        double[] resultT = new double[sizes[sizes.length-1]];
+        double[] resultP = new double[sizes[sizes.length-1]];
+
         double[] x = new double[thresholds.length];
         for(int i = 0; i<x.length; i++){
             x[i]=(double)this.sizes[i].intValue();
 
         }
-        UnivariateInterpolator interpolator = new SplineInterpolator();
+        UnivariateInterpolator interpolator = new LoessInterpolator(0.4,LoessInterpolator.DEFAULT_ROBUSTNESS_ITERS);
         UnivariateFunction function = interpolator.interpolate(x, thresholds);
+
+        UnivariateInterpolator interpolatorT = new LoessInterpolator();
+        UnivariateFunction functionT = interpolatorT.interpolate(x, meanTeststats);
+
 
         double last = 1.0;
         for (int i = 0; i<x.length; i++) {
             while(x[i]-last>0) {
-                double interpolatedY = function.value(last);
-                result[(int)last-1] = interpolatedY;
+                result[(int)last-1] = function.value(last);
+                resultT[(int)last-1] = functionT.value(last);
                 last++;
             }
             result[(int)last-1] = thresholds[i];
+            resultT[(int)last-1] = meanTeststats[i];
             last = last+1.0;
         }
         this.thresholds = result;
+        this.meanTeststats = resultT;
     }
+
     public double[] getThresholds(){
         return this.thresholds;
     }

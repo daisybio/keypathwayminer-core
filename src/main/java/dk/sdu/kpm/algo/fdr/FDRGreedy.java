@@ -6,6 +6,7 @@ import dk.sdu.kpm.taskmonitors.IKPMTaskMonitor;
 import dk.sdu.kpm.graph.GeneNode;
 import dk.sdu.kpm.graph.KPMGraph;
 import dk.sdu.kpm.graph.Result;
+import dk.sdu.kpm.utils.Comparison;
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -16,6 +17,9 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import dk.sdu.kpm.utils.Comparison;
+import dk.sdu.kpm.utils.Comparator;
+import org.apache.commons.math3.stat.inference.MannWhitneyUTest;
 
 public class FDRGreedy implements Serializable {
 
@@ -32,12 +36,14 @@ public class FDRGreedy implements Serializable {
 
     private volatile KPMSettings kpmSettings;
 
+    boolean general;
+
     //thread safe
     //private volatile DistributionGenerator dg; ??
     private final DistributionGenerator dg;
     ConcurrentHashMap<GeneNode, Boolean> visited;
 
-    public FDRGreedy(KPMGraph g, IKPMTaskMonitor taskMonitor, KPMSettings settings, DistributionGenerator dg) {
+    public FDRGreedy(KPMGraph g, IKPMTaskMonitor taskMonitor, KPMSettings settings, DistributionGenerator dg, boolean general) {
         this.g = g;
         this.copy = g;
         this.taskMonitor = taskMonitor;
@@ -45,7 +51,9 @@ public class FDRGreedy implements Serializable {
         this.l_map = settings.CASE_EXCEPTIONS_MAP;
         this.kpmSettings = settings;
         this.dg = dg;
+        this.general = general;
     }
+
 
     public List<Result> getResults() {
         return allsds;
@@ -74,7 +82,7 @@ public class FDRGreedy implements Serializable {
 
        for (final GeneNode node : g.getVertices()) {
             visited.put(node, false);
-            if (checkFitness(node)) {
+            if (checkFitness(node, general)) {
             futures.add(pool.submit(new Callable<Result>() {
 
                 @Override
@@ -112,113 +120,150 @@ public class FDRGreedy implements Serializable {
     }
 
     private Result fromStartingNode(GeneNode startingNode) {
-        //if(visited.get(startingNode)){
-         //   return null;
-        //}
         RandomSubgraph sd = new RandomSubgraph(startingNode);
+        sd = extendNetwork(sd, false);
+        sd = extendNetwork(sd, true);
+        return sd;
+    }
 
+    private RandomSubgraph extendNetwork(RandomSubgraph sd, boolean isSecond){
         //RandomSubgraph sol = new RandomSubgraph(startingNode);
         // starting node can be addedKPMGraph kpmGraph
         //GeneNode st = new GeneNode(startingNode);
         ArrayList<GeneNode> candidates = new ArrayList<GeneNode>();
         HashSet<GeneNode> queried = new HashSet<GeneNode>();
-        candidates.addAll(copy.getNeighbors(startingNode));
 
-        candidates.sort(new Comparator<GeneNode>() {
-         @Override
+        for (GeneNode n : sd.getVertices()) {
+            candidates.addAll(copy.getNeighbors(n));
+        }
+        PriorityQueue<GeneNode> queue = new PriorityQueue<GeneNode>(new java.util.Comparator<GeneNode>() {
+            @Override
             public int compare(GeneNode o1, GeneNode o2) {
-                return o1.nodeId.compareTo(o2.nodeId);
-           }
+                if (Math.abs(o1.getPvalue()) <= Math.abs(o2.getPvalue())) {
+                    return -1;
+                } else {
+                    return 1;
+                }
+            }
         });
-        //if (sd.addVertex(startingNode)) {
-            //visited.put(startingNode, true);
-            queried.add(startingNode);
+        queue.addAll(candidates);
 
-            boolean condition = true;
-            while (condition) {
-                ArrayList<GeneNode> checked = new ArrayList<GeneNode>();
-                HashSet<GeneNode> temp = new HashSet<GeneNode>();
-                for (GeneNode g : candidates) {
-
-                    if (checkFitness(g)) {
-                        boolean b = sd.addVertex(g);
-                        if (checkFitness(sd)) {
-                            // Add edges for newly created node
-                            for (GeneEdge e : copy.getOutEdges(g)) {
-                                if (sd.containsVertex(copy.getEndpoints(e).getFirst()) &&
-                                        sd.containsVertex(copy.getEndpoints(e).getSecond())) {
-                                    sd.addEdge(e, new Pair<GeneNode>(copy.getEndpoints(e)), EdgeType.UNDIRECTED);
-                                }
+        boolean condition = true;
+        while (condition) {
+            GeneNode g = queue.poll();
+            if( g!=null) {
+                if (queried.contains(g)) {
+                    continue;
+                }
+                queried.add(g);
+                if (sd.addVertex(g)) {
+                    if (checkFitness(sd, general)) {
+                        for (GeneEdge e : copy.getOutEdges(g)) {
+                            if (sd.containsVertex(copy.getEndpoints(e).getFirst()) &&
+                                    sd.containsVertex(copy.getEndpoints(e).getSecond())) {
+                                sd.addEdge(e, new Pair<GeneNode>(copy.getEndpoints(e)), EdgeType.UNDIRECTED);
                             }
-                            temp.addAll(copy.getNeighbors(g));
-                        } else {
-                            sd.removeVertex(g);
                         }
-                }
-                    checked.add(g);
-                    queried.add(g);
-                }
-                //System.out.println(temp.size());
-                for (GeneNode tmpN : temp) {
-                    if (!queried.contains(tmpN)) {
-                        candidates.add(tmpN);
+                        queue.addAll(copy.getNeighbors(g));
+                    } else {
+                        sd.removeVertex(g);
                     }
+
                 }
-                candidates.removeAll(checked);
-                if(!checkFitness(sd)){
+            }else {
                     condition = false;
                 }
-                if(candidates.size()==0){
-                    condition=false;
-                }
-                candidates.sort(new Comparator<GeneNode>() {
-                    @Override
-                    public int compare(GeneNode o1, GeneNode o2) {
-                        return o1.nodeId.compareTo(o2.nodeId);
-                    }
-                });
-
             }
-       // }
+            if(!checkFitness(sd, general)){
+                condition = false;
+            }
+
         return sd;
     }
 
-    private boolean checkFitness(GeneNode n){
-        boolean fit = false;
-        // TODO: currently a random p value is chosen
-        String akey = n.getAveragePvalue().keySet().
-                toArray(new String[n.getAveragePvalue().keySet().size()])[0];
-        if(n.getAveragePvalue().get(akey)<=0.05){
-            fit = true;
-            //System.out.println(n.nodeId+"\t"+fit);
-        }
-        else{
-            fit = false;
-        }
+    /*
+    * User can choose between using averaged p-values for the patients
+    * or single p-value per gene
+     */
+    private boolean checkFitness(GeneNode n, boolean general){
+            boolean fit = false;
+            if (!general) {
 
+                // TODO: currently a random p value is chosen
+                String akey = n.getAveragePvalue().keySet().
+                        toArray(new String[n.getAveragePvalue().keySet().size()])[0];
+                if (Comparison.evalate(Math.abs(n.getAveragePvalue().get("L1")), kpmSettings.SIGNIFICANCE_LEVEL, kpmSettings.COMPARATOR)) {
+                    fit = true;
+                    //System.out.println(n.nodeId+"\t"+fit);
+                } else {
+                    fit = false;
+                }
+            } else {
+                if (Comparison.evalate(Math.abs(n.getPvalue()), kpmSettings.SIGNIFICANCE_LEVEL, kpmSettings.COMPARATOR)) {
+                    fit = true;
+                }
+            }
         return fit;
     }
 
     /*
     * compare combined p value of the current subnetwork to the fdr of the random networks of that size.
      */
-    private boolean checkFitness(RandomSubgraph sg){
+    private boolean checkFitness(RandomSubgraph sg, boolean general){
         boolean fit = false;
-        // TODO insert individual threshold for network size here
-        if(sg.getVertices().size()>=dg.getThresholds().length){
+        if (sg.getVertices().size() >= dg.getThresholds().length) {
             return false;
         }
-        // refresh P value of subnetwork
-        sg.calculatePvalFisher();
-        // subnetwork pvalue must be smaller than threshold
-        if(sg.getPval()- dg.getThreshold(sg.getVertexCount())<0.0000000000000000000001){
-            fit = true;
+        if(!general) {
+            // TODO: adapt mean
+            // refresh P value of subnetwork
+            sg.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
+            // subnetwork pvalue must be smaller than threshold
+            if(kpmSettings.AGGREGATION_METHOD.equals("fisher")) {
+                if (sg.getPval() - dg.getThreshold(sg.getVertexCount()) < Double.MIN_VALUE) {
+                    fit = true;
+                }
+            }
+            else{
+                if (sg.getTestStatistics() - dg.getMeanTS(sg.getVertexCount()) < Double.MIN_VALUE) {
+                    fit = true;
+                }
+            }
         }
-        else{
-            fit = false;
+        else {
+            sg.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
+            if (kpmSettings.AGGREGATION_METHOD.equals("fisher")) {
+                if (sg.getGeneralPval() - dg.getThreshold(sg.getVertexCount()) < Double.MIN_VALUE) {
+                    fit = true;
+                }
+            } else {
+                if ((sg.getGeneralTeststat() - dg.getMeanTS(sg.getVertexCount()))<Double.MIN_VALUE) {
+                    fit = true;
+                }
+            }
         }
-        //System.out.println(fit);
         return fit;
+
+            /* double [] ts = new double[sg.getVertexCount()];
+                int counter = 0;
+                for(GeneNode cand : sg.getVertices()){
+                    ts[counter] = Math.abs(cand.getPvalue());
+                    //System.out.print(ts[counter]+"\t");
+                    counter++;
+                }
+                //System.out.println(ts);
+                //System.out.println(dg.getMeanTS(sg.getVertexCount()));
+                MannWhitneyUTest mw = new MannWhitneyUTest();
+                int ind = sg.getVertexCount();
+                while(!dg.getDistribution().keySet().contains(ind)){
+                    ind++;
+            }
+                double [] dummy = dg.getDistribution().get(ind);
+                //System.out.println(mw.mannWhitneyUTest(ts, dummy));
+                if(mw.mannWhitneyUTest(ts, dummy)<0.02){
+                    fit = true;
+                }
+               */
     }
 
 

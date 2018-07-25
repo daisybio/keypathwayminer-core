@@ -1,5 +1,6 @@
 package dk.sdu.kpm.algo.fdr;
 
+import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.graph.GeneEdge;
 import dk.sdu.kpm.graph.GeneNode;
 import dk.sdu.kpm.graph.KPMGraph;
@@ -33,20 +34,35 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
 
     private double pval = 1.0;
 
+    public double getGeneralPval() {
+        return generalPval;
+    }
+
+    private double generalPval = 1.0;
+
     public double getTestStatistics() {
         return testStatistics;
     }
 
     private double testStatistics = -1;
+
+    public double getGeneralTeststat() {
+        return generalTeststat;
+    }
+
+    private double generalTeststat = -1;
     private boolean is_significant = false;
     private double significanceLevel = 0.05;
+
+    private KPMSettings kpmSettings;
 
     /*
     * this constructor can be used to generate the random networks for the background distribution
      */
-    public RandomSubgraph(KPMGraph kpmGraph, int size, boolean includeBackgroundNodes) {
+    public RandomSubgraph(KPMGraph kpmGraph, int size, boolean includeBackgroundNodes, String filename, KPMSettings kpmSettings) {
         super();
-        generateRandomSizeN(kpmGraph, size, includeBackgroundNodes);
+        this.kpmSettings = kpmSettings;
+        generateRandomSizeN(kpmGraph, size, includeBackgroundNodes, filename);
     }
     /*
     * This constructor will be used by the Algorithm to generate candidate networks
@@ -57,8 +73,8 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     this.addVertex(node);
     }
 
-    private void generateRandomSizeN(KPMGraph kpmGraph, int size, boolean includeBackgroundNodes) {
-        Random rand = new Random(11011994);
+    private void generateRandomSizeN(KPMGraph kpmGraph, int size, boolean includeBackgroundNodes, String filename) {
+        Random rand = new Random();
         int randomNodeIndex;
         GeneNode[] nodes = kpmGraph.getVertices().toArray(new GeneNode[kpmGraph.getVertices().size()]);
         // TODO Array sorting for deterministic behaviour?
@@ -111,14 +127,70 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
             }
         }
         //System.out.println(this.getVertices().size());
-        int degFree = calculatePvalFisher() * 2;
-        significanceTest(degFree, this.testStatistics, this.significanceLevel);
+        int degFree = calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
         //System.out.println(this.getVertices().size());
-        writeToFile("/home/anne/Documents/Master/MA/Testing/out_new/dist/pvalsFall.txt",
-                "/home/anne/Documents/Master/MA/Testing/out_new/nodeDist/nodeDistFall.txt");
+        writeToFile(filename+"pvalsSamplewise.txt", filename+"nodeDist.txt", filename+"pvalsGeneral.txt");
     }
 
-    protected int calculatePvalFisher() {
+    protected int calculateNetworkScore(String method){
+        int degFree = -1;
+        switch(method){
+            case "mean":
+                degFree =  calculateMeanPval();
+                break;
+            case "fisher":
+                degFree =  calculatePvalFisher();
+                //significanceTest(degFree, this.testStatistics, this.significanceLevel);
+                degFree = calculateGeneralPvalFisher();
+                break;
+            case "median":
+                degFree = calculateMedianPval();
+                break;
+            default:
+                System.exit(1);
+        }
+        return degFree;
+    }
+
+    private int calculateMedianPval(){
+        double[] nodes = new double[this.getVertexCount()];
+        double[] medianTest = new double[this.getVertexCount()];
+        int i = 0;
+        for(GeneNode n: this.getVertices()){
+            nodes[i]=Math.abs(n.getAveragePvalue().get("L1"));
+            medianTest[i] = Math.abs(n.getPvalue());
+            i++;
+        }
+        Arrays.sort(nodes);
+        Arrays.sort(medianTest);
+        int medIndx = (int)Math.floor(nodes.length/2.0);
+        this.testStatistics = nodes[medIndx];
+        this.generalTeststat = medianTest[medIndx];
+        return this.getVertexCount();
+    }
+
+
+    private int calculateMeanPval(){
+
+        double sumOfPvals = 0.0;
+        double sumOfGeneralPvals = 0.0;
+
+        for (GeneNode n: this.getVertices()){
+            // Use absolute values here to account for possibly negative zscores.
+            sumOfPvals=sumOfPvals+Math.abs(n.getAveragePvalue().get("L1"));
+            sumOfGeneralPvals = sumOfGeneralPvals + Math.abs(n.getPvalue());
+        }
+        double meanPval = sumOfPvals/this.getVertexCount();
+        double meanGenPval = sumOfGeneralPvals/this.getVertexCount();
+
+        this.testStatistics = meanPval;
+        this.generalTeststat = meanGenPval;
+        return this.getVertexCount();
+    }
+
+
+
+    private int calculatePvalFisher() {
         double sumOfLogPvals = 0;
         int infcounter = 0;
         for (GeneNode n : this.getVertices()) {
@@ -145,7 +217,7 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     }
 
     private void significanceTest(int degFreedom, double testStatistics, double significanceLevel) {
-        ChiSquaredDistribution chiSquare = new ChiSquaredDistribution(degFreedom);
+        ChiSquaredDistribution chiSquare = new ChiSquaredDistribution(degFreedom,  1.0E-20 );
         if(!Double.isInfinite(testStatistics)) {
             this.pval = 1.0- chiSquare.cumulativeProbability(testStatistics);
         }
@@ -156,21 +228,64 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
             this.is_significant = true;
         }
     }
-    public void writeToFile(String filename, String filename2) {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename,true)); BufferedWriter degreeWriter = new BufferedWriter(new FileWriter(filename2,true))) {
+
+    // TODO remove ugly code duplicates
+    protected int calculateGeneralPvalFisher() {
+        double sumOfLogPvals = 0;
+        int infcounter = 0;
+        for (GeneNode n : this.getVertices()) {
+
+            sumOfLogPvals += Math.log(n.getPvalue());
+
+            if(Double.isInfinite(Math.log(n.getPvalue()))){
+                System.out.println(n.nodeId);
+                infcounter ++;
+            }
+
+        }
+        //System.out.println(sumOfLogPvals);
+        double testStat = -2 * sumOfLogPvals;
+        this.generalTeststat = testStat;
+        int deg = 2*this.getVertices().size();
+        generalSignificanceTest(deg, this.generalTeststat, 0.05);
+        //System.out.println(infcounter);
+        return this.getVertices().size();
+    }
+
+    private void generalSignificanceTest(int degFreedom, double testStatistics, double significanceLevel) {
+        ChiSquaredDistribution chiSquare = new ChiSquaredDistribution(degFreedom,  1.0E-220 );
+        if(!Double.isInfinite(testStatistics)) {
+            this.generalPval = 1.0- chiSquare.cumulativeProbability(testStatistics);
+        }
+        else{
+            this.generalPval = 0.0;
+        }
+        if (this.generalPval <= significanceLevel) {
+            this.is_significant = true;
+        }
+    }
+
+
+    public void writeToFile(String filename, String filename2, String pvalsAll) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename,true));
+             BufferedWriter pvall = new BufferedWriter(new FileWriter(pvalsAll,true));
+             BufferedWriter degreeWriter = new BufferedWriter(new FileWriter(filename2,true))) {
             int counter = this.getVertices().size();
             // first column: network size
             degreeWriter.write(counter+"\t");
             bw.write(counter+"\t");
+            pvall.write(counter +"\t");
             for (GeneNode n : this.getVertices()) {
                     if(counter>1) {
                         degreeWriter.write(this.getNeighbors(n).size() + "\t");
                         bw.write(n.getAveragePvalue().get(n.getAveragePvalue().keySet().toArray()[0]) + "\t");
+                        pvall.write(n.getPvalue()+"\t");
                     }
                     else
                     {
                         degreeWriter.write(this.getNeighbors(n).size()+"");
                         bw.write(n.getAveragePvalue().get(n.getAveragePvalue().keySet().toArray()[0])+"");
+                        pvall.write(n.getPvalue()+"");
 
                     }
                     counter--;
@@ -178,6 +293,7 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
                 }
                 degreeWriter.write("\n");
                 bw.write("\n");
+                pvall.write("\n");
         }
         catch (IOException e){
             e.printStackTrace(
@@ -186,20 +302,31 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         }
     }
 
-    public void writeGraphToFile(String filename, String name){
+    public void writeGraphToFile(String filename, String name, boolean general){
             try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename+".graph", true));
-                 BufferedWriter stat = new BufferedWriter(new FileWriter(filename+".stat"))){
+                 BufferedWriter stat = new BufferedWriter(new FileWriter(filename+".stat", true));
+                 BufferedWriter nodes = new BufferedWriter(new FileWriter(filename+".nodes", true))){
                 // file for test p value and teststatistics for each solution
-                stat.write(name+"\t"+this.pval + "\t"+ this.testStatistics + "\n");
+                if(!general) {
+                    stat.write(name + "\t" + this.pval + "\t" + this.testStatistics + "\n");
+                    // separate entries for each node
+                    for (GeneNode n : this.getVertices()) {
+                        nodes.write(n.nodeId+"\t"+name +"\t"+n.getAveragePvalue().get("L1") +"\t"+ this.getNeighborCount(n) + "\n");
+                    }
+                }
+                else{
+                    stat.write(name + "\t" + this.getGeneralPval() + "\t" + this.generalTeststat + "\n");
+                    // separate entries for each node
+                    for (GeneNode n : this.getVertices()) {
+                        nodes.write(n.nodeId+"\t"+name +"\t"+n.getPvalue()  +"\t"+ this.getNeighborCount(n) + "\n");
+                    }
+                }
 
                 //write graph to file in sif format
                 for (GeneEdge e : this.getEdges()) {
                     bw.write(name +"\t"+getEndpoints(e).getFirst() + "\tpp\t" + getEndpoints(e).getSecond() + "\n");
                 }
-                // separate entries for each node
-                //for (GeneNode n : this.getVertices()) {
-                  //  bw.write(name +"\t"+n + "\n");
-                //}
+
                 //bw.append("###");
             } catch (IOException e) {
                 e.printStackTrace();

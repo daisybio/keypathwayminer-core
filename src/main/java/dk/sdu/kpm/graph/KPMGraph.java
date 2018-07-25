@@ -182,12 +182,18 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
     private void createGraph() {
         //processBackNodes(treatBackNodes);
         //processBackNodes("uni");
+        //TODO: choose approapriate method
         processBackNodes(1.0);
 
+        // TODO: adapt for multiple datasets
         for (String nodeId : expressionIdToNodeMap.keySet()) {
+            double pval = 1.0;
+            if(nodeIdToPvalue.containsKey(nodeId)){
+                pval = nodeIdToPvalue.get(nodeId).get("L1");
+            }
             Map<String, double[]> exprVectors = expressionIdToNodeMap.get(nodeId);
             nodeIdToGeneNode.put(nodeId, new GeneNode(nodeId, nodeIdToSymbol.get(nodeId),
-                    expressionIdToNodeMap.get(nodeId), nodeIdToPvalue.get(nodeId), use_double));
+                    expressionIdToNodeMap.get(nodeId), pval, use_double));
         }
 
         for (String[] pair : edgeList) {
@@ -494,10 +500,15 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
                     }
                 }
             }
+            // TODO: change L1
             expressionIdToNodeMap.put(nodeId, expVectors);
             if (!nodeIdToGeneNode.containsKey(nodeId)) {
+                double pval = 1.0;
+                if(nodeIdToPvalue.containsKey(nodeId)){
+                    pval = nodeIdToPvalue.get(nodeId).get("L1");
+                }
                 nodeIdToGeneNode.put(nodeId, new GeneNode(nodeId,
-                        nodeIdToSymbol.get(nodeId), expVectors, nodeIdToPvalue.get(nodeId), use_double));
+                        nodeIdToSymbol.get(nodeId), expVectors, pval, use_double));
             } else {
                 nodeIdToGeneNode.get(nodeId).setDifferenceIntMap(expVectors);
             }

@@ -4,6 +4,8 @@ import dk.sdu.kpm.algo.glone.LocalSearch;
 import dk.sdu.kpm.algo.glone.RhoDecay;
 import dk.sdu.kpm.graph.KPMGraph;
 import dk.sdu.kpm.results.PercentageParameters;
+import dk.sdu.kpm.utils.Comparator;
+import dk.sdu.kpm.utils.Comparison;
 import dk.sdu.kpm.validation.ValidationOverlapResult;
 
 import java.util.ArrayList;
@@ -280,9 +282,18 @@ public class KPMSettings {
 
     public volatile int TOTAL_EDGE_HITS_MAX = 0;
 
+    public Comparator COMPARATOR = Comparator.LET;
+
     public volatile HashMap<Integer, String> INDEX_L_MAP = new HashMap<Integer, String>();
 
     public volatile List<String> VALIDATION_GOLDSTANDARD_NODES = new ArrayList<String>();
+
+    // Variables for FDR
+
+    public double SIGNIFICANCE_LEVEL = 0.05;
+
+    public volatile String AGGREGATION_METHOD = "median";
+
 
     public boolean containsGoldStandardNodes(){
         return this.VALIDATION_GOLDSTANDARD_NODES != null && this.VALIDATION_GOLDSTANDARD_NODES.size() > 0;

@@ -28,8 +28,8 @@ public class AlgoComputations {
     private ACO aco = null;
     private FDRGreedy fdr = null;
 
-    // TODO: modify run such that distribution generator not part of the paramters, overload?, add dg to kpmSettings?
-    public List<Result> run(Algo algo, KPMGraph g, IKPMTaskMonitor taskMonitor, KPMSettings settings, DistributionGenerator dg) {
+    // TODO: modify run such that distribution generator not part of the paramters, overload?, add dg to kpmSettings? and general
+    public List<Result> run(Algo algo, KPMGraph g, IKPMTaskMonitor taskMonitor, KPMSettings settings, DistributionGenerator dg, boolean general) {
 
         List<Result> results = null;
 
@@ -81,7 +81,7 @@ public class AlgoComputations {
                     break;
 
                 case FDR:
-                    fdr = new FDRGreedy(g, taskMonitor, settings, dg);
+                    fdr = new FDRGreedy(g, taskMonitor, settings, dg, general);
                     results = fdr.runGreedy();
                     fdr = null;
                     break;

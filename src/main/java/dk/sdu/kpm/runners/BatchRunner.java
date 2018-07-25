@@ -89,7 +89,7 @@ public class BatchRunner implements Runnable {
         taskMonitor.setStatusMessage("Searching and extracting pathways...");
         long start = System.currentTimeMillis();
 
-        List<Result> results = new AlgoComputations().run(kpmSettings.ALGO, kpmSettings.MAIN_GRAPH, taskMonitor, kpmSettings, null);
+        List<Result> results = new AlgoComputations().run(kpmSettings.ALGO, kpmSettings.MAIN_GRAPH, taskMonitor, kpmSettings, null, false);
 
         long end = System.currentTimeMillis();
         kpmSettings.TOTAL_RUNNING_TIME = (end - start) / 1000;
@@ -258,7 +258,7 @@ public class BatchRunner implements Runnable {
 
                 // An interface mapper is needed, to isolate the library completely from Cytoscape
                 // Should not affect performance
-                List<Result> results = new AlgoComputations().run(kpmSettings.ALGO, kpmSettings.MAIN_GRAPH, taskMonitor, kpmSettings, null);
+                List<Result> results = new AlgoComputations().run(kpmSettings.ALGO, kpmSettings.MAIN_GRAPH, taskMonitor, kpmSettings, null, false);
                 long end = System.currentTimeMillis();
                 String runId = currentGraphTitle + "-R" + runFormat.format(runs + 1);
                 runs++;
@@ -421,7 +421,7 @@ public class BatchRunner implements Runnable {
 
                 // An interface mapper is needed, to isolate the library completely from Cytoscape
                 // Should not affect performance
-                List<Result> results = new AlgoComputations().run(kpmSettings.ALGO, kpmSettings.MAIN_GRAPH, taskMonitor, kpmSettings, null);
+                List<Result> results = new AlgoComputations().run(kpmSettings.ALGO, kpmSettings.MAIN_GRAPH, taskMonitor, kpmSettings, null, false);
                 long end = System.currentTimeMillis();
                 String runId = currentGraphTitle + "-R" + runFormat.format(runs + 1);
                 runs++;
