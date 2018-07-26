@@ -294,6 +294,9 @@ public class KPMSettings {
 
     public volatile String AGGREGATION_METHOD = "median";
 
+    public volatile double FDR_CUTOFF = 0.05;
+    public volatile boolean USE_INDIVIDUAL_PVALUES = true;
+
 
     public boolean containsGoldStandardNodes(){
         return this.VALIDATION_GOLDSTANDARD_NODES != null && this.VALIDATION_GOLDSTANDARD_NODES.size() > 0;

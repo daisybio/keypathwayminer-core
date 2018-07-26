@@ -1,5 +1,6 @@
 package dk.sdu.kpm.gui.tree;
 
+import com.google.common.base.Function;
 import edu.uci.ics.jung.algorithms.layout.Layout;
 import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.visualization.VisualizationViewer;
@@ -80,7 +81,7 @@ public class VerticalTreeLayout implements Layout<TreeNode, TreeEdge> {
 		initialize();
 	}
 
-	@Override
+	//@Override
 	public Point2D transform(TreeNode node) {
 		if (!transformer.containsKey(node)) {
 			throw new IllegalArgumentException(
@@ -136,6 +137,11 @@ public class VerticalTreeLayout implements Layout<TreeNode, TreeEdge> {
 	}
 
 	@Override
+	public void setInitializer(Function<TreeNode, Point2D> function) {
+
+	}
+
+	@Override
 	public boolean isLocked(TreeNode node) {
 		return lockMap.get(node);
 	}
@@ -168,7 +174,7 @@ public class VerticalTreeLayout implements Layout<TreeNode, TreeEdge> {
 						+ " size and cannot be changed.");
 	}
 
-	@Override
+	//@Override
 	public void setInitializer(Transformer<TreeNode, Point2D> arg0) {
 		throw new UnsupportedOperationException(
 				"Initializers are not supported.");
@@ -269,4 +275,8 @@ public class VerticalTreeLayout implements Layout<TreeNode, TreeEdge> {
 		visView = vv;
 	}
 
+	@Override
+	public Point2D apply(TreeNode treeNode) {
+		return null;
+	}
 }

@@ -146,6 +146,9 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
             case "median":
                 degFree = calculateMedianPval();
                 break;
+            case "sum":
+                degFree = calculateSumPval();
+                break;
             default:
                 System.exit(1);
         }
@@ -166,6 +169,18 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         int medIndx = (int)Math.floor(nodes.length/2.0);
         this.testStatistics = nodes[medIndx];
         this.generalTeststat = medianTest[medIndx];
+        return this.getVertexCount();
+    }
+
+    private int calculateSumPval(){
+        double sum = 0.0;
+        double sumGeneral = 0.0;
+        for(GeneNode n : this.getVertices()){
+            sum+=n.getAveragePvalue().get("L1");
+            sumGeneral+= n.getPvalue();
+        }
+        this.generalTeststat = sumGeneral;
+        this.testStatistics = sum;
         return this.getVertexCount();
     }
 

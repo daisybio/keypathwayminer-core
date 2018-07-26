@@ -12,7 +12,7 @@ import org.apache.commons.collections15.Factory;
  */
 public class NodeFactory implements Factory<TreeNode> {
 
-	@Override
+	//@Override
 	public TreeNode create() {
 		return new BinaryOperatorNode(BinaryOperatorType.OR);
 	}

@@ -44,11 +44,13 @@ public class ProbabilisticRunner implements Runnable {
     private volatile boolean cancelled;
     private volatile boolean copyKPMSettings;
     private KPMGraph graph2;
+    private String outdir;
 
     private volatile KPMSettings kpmSettings;
 
     public ProbabilisticRunner(String runId, IKPMTaskMonitor taskMonitor,
-                               IKPMRunListener listener, KPMSettings settings, KPMGraph graph2) {
+                               IKPMRunListener listener, KPMSettings settings, KPMGraph graph2,
+                               String outdir) {
         this.runId = runId;
         this.taskMonitor = taskMonitor;
         this.listener = listener;
@@ -57,6 +59,7 @@ public class ProbabilisticRunner implements Runnable {
         this.kpmSettings = settings;
         this.copyKPMSettings = false;
         this.graph2 = graph2;
+        this.outdir = outdir;
         taskMonitor.setTitle("Key Pathway Miner");
     }
 
@@ -81,14 +84,14 @@ public class ProbabilisticRunner implements Runnable {
 
             boolean general = true;
             // String newpath =
-            Files.createDirectories(Paths.get("/home/anne/Documents/Master/MA/Testing/toydata/"+now));
+            Files.createDirectories(Paths.get(outdir));
 
             IPerturbation<KPMGraph> ps = PerturbationService.getPerturbation(IPerturbation.PerturbationTags.NodeSwap);
 
             this.graph2 = ps.execute(10, kpmSettings.MAIN_GRAPH, new KPMDummyTaskMonitor());
             DistributionGenerator dg1 = new DistributionGenerator(this.graph2, 100, 1,250, false,
                     kpmSettings);
-        dg1.createBackgroundDistribution("/home/anne/Documents/Master/MA/Testing/toydata/"+now+"/distribution_", general);
+        dg1.createBackgroundDistribution(outdir+"/distribution_", general);
         //dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/toydata/dist/distributionFall.txt", dg1.getDistribution());
         //dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/toydata/dist/pdistributionFall.txt", dg1.getPdist());
         taskMonitor.setStatusMessage("Refreshing graph...");
@@ -96,7 +99,7 @@ public class ProbabilisticRunner implements Runnable {
         taskMonitor.setStatusMessage("Searching and extracting pathways...");
         long start = System.currentTimeMillis();
 
-        try(BufferedWriter bw = new BufferedWriter(new FileWriter("/home/anne/Documents/Master/MA/Testing/toydata/"+now+"/thresholds.txt"))) {
+        try(BufferedWriter bw = new BufferedWriter(new FileWriter(outdir+"/thresholds.txt"))) {
             for (int d = 0; d<dg1.getThresholds().length; d++) {
                 bw.write(d+"\t"+dg1.getThresholds()[d]+"\n");
             }
@@ -106,7 +109,7 @@ public class ProbabilisticRunner implements Runnable {
         catch(IOException e){
             e.printStackTrace();
         }
-            try(BufferedWriter bw = new BufferedWriter(new FileWriter("/home/anne/Documents/Master/MA/Testing/toydata/"+now+"/teststats.txt"))) {
+            try(BufferedWriter bw = new BufferedWriter(new FileWriter(outdir+"/teststats.txt"))) {
                 for (int d = 0; d<dg1.getMeanTeststats().length; d++) {
                     bw.write(d+"\t"+dg1.getMeanTeststats()[d]+"\n");
                 }
@@ -125,13 +128,13 @@ public class ProbabilisticRunner implements Runnable {
 
         for(Result res: results){
             if(res instanceof RandomSubgraph && ((RandomSubgraph) res).getVertices().size()>1){
-                ((RandomSubgraph) res).writeGraphToFile("/home/anne/Documents/Master/MA/Testing/toydata/"+now+"/file", "graph"+counter, general);
+                ((RandomSubgraph) res).writeGraphToFile(outdir+"/file", "graph"+counter, general);
                 counter++;
             }
         }
         // Write an R markdown report. May fail.
             String command = "Rscript "+ "~/Masterarbeit/R/reports/create_report_greedy.R" +"" +
-                    " -f /home/anne/Documents/Master/MA/Testing/toydata/"+now
+                    " -f "+outdir
                     + " -g ~/Masterarbeit/data/toydata/expression_type.tsv";
         System.out.println(command);
             Process process = Runtime.getRuntime().exec(command);

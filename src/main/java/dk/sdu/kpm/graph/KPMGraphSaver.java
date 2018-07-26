@@ -12,7 +12,8 @@ import java.util.Calendar;
 
 import javax.imageio.ImageIO;
 
-import org.apache.commons.collections15.Transformer;
+import com.google.common.base.Function;
+import org.apache.commons.collections15.*;
 
 import edu.uci.ics.jung.algorithms.layout.FRLayout;
 import edu.uci.ics.jung.algorithms.layout.Layout;
@@ -22,6 +23,8 @@ import edu.uci.ics.jung.visualization.decorators.EdgeShape;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
 import edu.uci.ics.jung.visualization.renderers.DefaultVertexLabelRenderer;
 import edu.uci.ics.jung.visualization.renderers.Renderer;
+
+import static edu.uci.ics.jung.visualization.decorators.EdgeShape.*;
 
 class KPMGraphSaver {
 	public static void SaveGraphToFile(KPMGraph graph, String filePath){
@@ -34,18 +37,18 @@ class KPMGraphSaver {
 
 		visViewer.setBackground(Color.WHITE);
 		visViewer.getRenderer().getVertexLabelRenderer().setPosition(Renderer.VertexLabel.Position.CNTR);
-		visViewer.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<GeneNode>());
+		visViewer.getRenderContext().setVertexLabelTransformer(new ToStringLabeller());
 		visViewer.setForeground(Color.BLACK);
 
 		visViewer.setBackground(Color.WHITE);
-		visViewer.getRenderContext().setEdgeLabelTransformer(new ToStringLabeller<GeneEdge>());
-		visViewer.getRenderContext().setEdgeShapeTransformer(new EdgeShape.Line<GeneNode, GeneEdge>());
-		visViewer.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<GeneNode>());
+		visViewer.getRenderContext().setEdgeLabelTransformer(new ToStringLabeller());
+		//visViewer.getRenderContext().setEdgeShapeTransformer(new EdgeShape.Line());
+		visViewer.getRenderContext().setVertexLabelTransformer(new ToStringLabeller());
 		visViewer.getRenderContext().setVertexLabelRenderer(new DefaultVertexLabelRenderer(Color.LIGHT_GRAY));
 
 		Transformer<GeneNode, Paint> vertexPaint = new Transformer<GeneNode, Paint>() {public Paint transform(GeneNode n) {return Color.LIGHT_GRAY;}};
 
-		visViewer.getRenderContext().setVertexFillPaintTransformer(vertexPaint);
+		visViewer.getRenderContext().setVertexFillPaintTransformer((Function<? super GeneNode, Paint>) vertexPaint);
 		visViewer.getRenderer().getVertexLabelRenderer()
 		.setPosition(Renderer.VertexLabel.Position.CNTR);
 
