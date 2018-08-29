@@ -5,10 +5,7 @@ import dk.sdu.kpm.graph.KPMGraph;
 import dk.sdu.kpm.graph.Result;
 import dk.sdu.kpm.taskmonitors.KPMDummyTaskMonitor;
 import org.apache.commons.math3.analysis.UnivariateFunction;
-import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
-import org.apache.commons.math3.analysis.interpolation.LoessInterpolator;
-import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
-import org.apache.commons.math3.analysis.interpolation.UnivariateInterpolator;
+import org.apache.commons.math3.analysis.interpolation.*;
 import org.apache.commons.math3.stat.Frequency;
 
 import java.io.BufferedWriter;
@@ -203,19 +200,39 @@ public class DistributionGenerator {
     }
 
     public void interpolateThreshold(){
-        double[] result = new double[sizes[sizes.length-1]];
-        double[] resultT = new double[sizes[sizes.length-1]];
-        double[] resultP = new double[sizes[sizes.length-1]];
+        double[] result = new double[sizes[sizes.length-1]-1];
+        double[] resultT = new double[sizes[sizes.length-1]-1];
+        double[] resultP = new double[sizes[sizes.length-1]-1];
 
         double[] x = new double[thresholds.length];
         for(int i = 0; i<x.length; i++){
             x[i]=(double)this.sizes[i].intValue();
 
         }
-        UnivariateInterpolator interpolator = new LoessInterpolator(0.4,LoessInterpolator.DEFAULT_ROBUSTNESS_ITERS);
+        int counter = 0;
+        for(int i = 0; i<sizes.length-1; i++){
+            int distance =sizes[i+1]-sizes[i];
+            if(distance==1){
+                result[counter]=this.thresholds[i];
+                resultT[counter] = meanTeststats[i];
+                counter++;
+            }
+            else{
+                int tmp = 1;
+                while(distance>=tmp){
+                    result[counter]= ((distance-tmp*1.0)/distance*1.0)*this.thresholds[i]+(tmp*1.0/distance*1.0)*this.thresholds[i+1];
+                    resultT[counter]= ((distance-tmp*1.0)/distance*1.0)*this.meanTeststats[i]+(tmp*1.0/distance*1.0)*this.meanTeststats[i+1];
+                    tmp++;
+                    counter++;
+                }
+            }
+        }
+
+
+        /*UnivariateInterpolator interpolator = new LoessInterpolator(0.3,LoessInterpolator.DEFAULT_ROBUSTNESS_ITERS);
         UnivariateFunction function = interpolator.interpolate(x, thresholds);
 
-        UnivariateInterpolator interpolatorT = new LoessInterpolator();
+        UnivariateInterpolator interpolatorT = new LoessInterpolator(0.25,LoessInterpolator.DEFAULT_ROBUSTNESS_ITERS);
         UnivariateFunction functionT = interpolatorT.interpolate(x, meanTeststats);
 
 
@@ -230,6 +247,7 @@ public class DistributionGenerator {
             resultT[(int)last-1] = meanTeststats[i];
             last = last+1.0;
         }
+        */
         this.thresholds = result;
         this.meanTeststats = resultT;
     }

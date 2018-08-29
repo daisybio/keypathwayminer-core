@@ -298,6 +298,7 @@ public class KPMSettings {
     public volatile boolean USE_INDIVIDUAL_PVALUES = true;
 
 
+
     public boolean containsGoldStandardNodes(){
         return this.VALIDATION_GOLDSTANDARD_NODES != null && this.VALIDATION_GOLDSTANDARD_NODES.size() > 0;
     }

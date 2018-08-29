@@ -5,6 +5,7 @@ import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.RunStats;
 import dk.sdu.kpm.algo.fdr.DistributionGenerator;
 import dk.sdu.kpm.algo.fdr.RandomSubgraph;
+import dk.sdu.kpm.algo.fdr.Testcase;
 import dk.sdu.kpm.charts.ChartInput;
 import dk.sdu.kpm.charts.IChart;
 import dk.sdu.kpm.charts.StandardCharts;
@@ -33,6 +34,7 @@ import java.util.logging.Level;
 import java.util.List;
 
 import static dk.sdu.kpm.perturbation.IPerturbation.PerturbationTags.EdgeRewire;
+import static java.lang.System.exit;
 
 public class ProbabilisticRunner implements Runnable {
 
@@ -85,6 +87,10 @@ public class ProbabilisticRunner implements Runnable {
             boolean general = true;
             // String newpath =
             Files.createDirectories(Paths.get(outdir));
+
+            Testcase tc = new Testcase(this.kpmSettings.MAIN_GRAPH, this.kpmSettings);
+            tc.createTestcases();
+            exit(0);
 
             IPerturbation<KPMGraph> ps = PerturbationService.getPerturbation(IPerturbation.PerturbationTags.NodeSwap);
 

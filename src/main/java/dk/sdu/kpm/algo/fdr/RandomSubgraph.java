@@ -73,8 +73,12 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     this.addVertex(node);
     }
 
+    public RandomSubgraph(){
+
+    }
+
     private void generateRandomSizeN(KPMGraph kpmGraph, int size, boolean includeBackgroundNodes, String filename) {
-        Random rand = new Random();
+        Random rand = kpmSettings.R;
         int randomNodeIndex;
         GeneNode[] nodes = kpmGraph.getVertices().toArray(new GeneNode[kpmGraph.getVertices().size()]);
         // TODO Array sorting for deterministic behaviour?
@@ -176,6 +180,7 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         double sum = 0.0;
         double sumGeneral = 0.0;
         for(GeneNode n : this.getVertices()){
+            int nrNode = this.getNeighborCount(n);
             sum+=n.getAveragePvalue().get("L1");
             sumGeneral+= n.getPvalue();
         }
@@ -346,6 +351,14 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
             } catch (IOException e) {
                 e.printStackTrace();
             }
+    }
+
+
+    public boolean duplicated(RandomSubgraph sg){
+        // Networks have same nodes or one is contained in the other
+        boolean dup = (sg.getVertices().containsAll(this.getVertices())|this.getVertices().containsAll(sg.getVertices()));
+
+         return dup;
     }
 
     @Override
