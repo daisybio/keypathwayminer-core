@@ -265,7 +265,11 @@ public class GeneNode implements Comparable<GeneNode>, Serializable {
         }
         return aux / (double)getDifferenceMap().size();
     }
-    
+
+    public void setPvalue(double pvalue) {
+        this.pvalue = pvalue;
+    }
+
     public int getAverageExpressedCases() {
         double den = 0.0;
         for (String expId: getDifferenceMap().keySet()) {

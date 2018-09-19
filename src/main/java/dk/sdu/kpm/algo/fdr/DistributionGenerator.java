@@ -32,7 +32,7 @@ public class DistributionGenerator {
     private int sizeOfLargest;
     private int sizeOfSmallest;
     private boolean includeBackground = true;
-    private double fdr = 0.05;
+    private double fdr;
     protected double[] thresholds;
     protected double [] meanTeststats;
     Integer[] sizes;
@@ -48,6 +48,7 @@ public class DistributionGenerator {
         this.pdist = new HashMap<Integer,double[]>();
         this.includeBackground = includeBackground;
         this.kpmSettings = kpmSettings;
+        this.fdr = kpmSettings.FDR_CUTOFF;
     }
 
     public double[] getMeanTeststats() {
@@ -127,8 +128,11 @@ public class DistributionGenerator {
         else if(j<=150){
             stepSize = 10;
         }
-        else{
+        else if(j<=200){
             stepSize = 25;
+        }
+        else{
+            stepSize = 100;
         }
         return stepSize;
     }

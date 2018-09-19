@@ -87,15 +87,17 @@ public class ProbabilisticRunner implements Runnable {
             boolean general = true;
             // String newpath =
             Files.createDirectories(Paths.get(outdir));
-
-            Testcase tc = new Testcase(this.kpmSettings.MAIN_GRAPH, this.kpmSettings);
-            tc.createTestcases();
-            exit(0);
+            //kpmSettings.AGGREGATION_METHOD = "mean";
+            //Testcase tc = new Testcase(this.kpmSettings.MAIN_GRAPH, this.kpmSettings);
+            //tc.createTestcases();
+            //tc.createRandomDistribution();
+            //exit(0);
 
             IPerturbation<KPMGraph> ps = PerturbationService.getPerturbation(IPerturbation.PerturbationTags.NodeSwap);
-
+                System.out.println("permute");
             this.graph2 = ps.execute(10, kpmSettings.MAIN_GRAPH, new KPMDummyTaskMonitor());
-            DistributionGenerator dg1 = new DistributionGenerator(this.graph2, 100, 1,250, false,
+            System.out.println("permute finsihed");
+            DistributionGenerator dg1 = new DistributionGenerator(this.graph2, 50, 1,1000, false,
                     kpmSettings);
         dg1.createBackgroundDistribution(outdir+"/distribution_", general);
         //dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/toydata/dist/distributionFall.txt", dg1.getDistribution());

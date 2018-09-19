@@ -47,7 +47,7 @@ public class GreedyN implements Serializable {
 
     public GreedyN(KPMGraph g, IKPMTaskMonitor taskMonitor, KPMSettings settings, boolean general, int targetSize, int sampleSize) {
         this.g = g;
-        this.copy = g;
+        this.copy = new KPMGraph(g);
         this.taskMonitor = taskMonitor;
         this.k = settings.GENE_EXCEPTIONS;
         this.l_map = settings.CASE_EXCEPTIONS_MAP;
@@ -56,6 +56,10 @@ public class GreedyN implements Serializable {
         this.general = general;
         this.targetSize = targetSize;
         this.sampleSize = sampleSize;
+
+        // This speeds up the sampling process by avoiding the multiplication during
+        // Queue ordering
+
     }
 
 
@@ -67,8 +71,13 @@ public class GreedyN implements Serializable {
         // this.g = g;
         List<Result> toReturn = new ArrayList<Result>();
         int nodesComputed = 0;
-        int numV = g.getVertexCount();
-
+        int numV = copy.getVertexCount();
+/*
+        for(GeneNode n: copy.getVertices()){
+            double nrNode = copy.getNeighborCount(n)*1.0;
+            n.setPvalue(n.getPvalue()*nrNode);
+        }
+*/
 
 
 
@@ -86,10 +95,10 @@ public class GreedyN implements Serializable {
         Random rand = new Random(3920);
         Set<Integer> sample = new HashSet<Integer>();
         while(sample.size()<sampleSize){
-            sample.add(rand.nextInt(g.getVertexCount()));
+            sample.add(rand.nextInt(copy.getVertexCount()));
         }
 
-        for (final GeneNode node : g.getVertices()) {
+        for (final GeneNode node : copy.getVertices()) {
             visited.put(node, false);
 
             if (sample.contains(counter)) {
@@ -126,6 +135,14 @@ public class GreedyN implements Serializable {
 
         }
         pool.shutdown();
+//        for(Result r: toReturn) {
+//            RandomSubgraph sd = (RandomSubgraph) r;
+//            for (GeneNode n : sd.getVertices()) {
+//                double nrNode = copy.getNeighborCount(n) * 1.0;
+//                n.setPvalue(n.getPvalue() / nrNode);
+//            }
+//            sd.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
+//        }
         return toReturn;
     }
 
@@ -177,7 +194,6 @@ public class GreedyN implements Serializable {
                 targetCounter=targetSize;
             }
         }
-
         sd.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
         return sd;
 
