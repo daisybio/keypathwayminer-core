@@ -72,12 +72,12 @@ public class GreedyN implements Serializable {
         List<Result> toReturn = new ArrayList<Result>();
         int nodesComputed = 0;
         int numV = copy.getVertexCount();
-/*
-        for(GeneNode n: copy.getVertices()){
+
+       /* for(GeneNode n: copy.getVertices()){
             double nrNode = copy.getNeighborCount(n)*1.0;
             n.setPvalue(n.getPvalue()*nrNode);
-        }
-*/
+        }*/
+
 
 
 
@@ -135,14 +135,14 @@ public class GreedyN implements Serializable {
 
         }
         pool.shutdown();
-//        for(Result r: toReturn) {
-//            RandomSubgraph sd = (RandomSubgraph) r;
-//            for (GeneNode n : sd.getVertices()) {
-//                double nrNode = copy.getNeighborCount(n) * 1.0;
-//                n.setPvalue(n.getPvalue() / nrNode);
-//            }
-//            sd.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
-//        }
+        /*for(Result r: toReturn) {
+            RandomSubgraph sd = (RandomSubgraph) r;
+            for (GeneNode n : sd.getVertices()) {
+                double nrNode = copy.getNeighborCount(n) * 1.0;
+                n.setPvalue(n.getPvalue() / nrNode);
+            }
+            sd.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
+        }*/
         return toReturn;
     }
 

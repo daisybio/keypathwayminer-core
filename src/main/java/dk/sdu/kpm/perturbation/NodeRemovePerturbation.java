@@ -2,6 +2,7 @@ package dk.sdu.kpm.perturbation;
 
 import java.util.HashSet;
 
+import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.taskmonitors.IKPMTaskMonitor;
 import dk.sdu.kpm.taskmonitors.KPMDummyTaskMonitor;
 import dk.sdu.kpm.graph.GeneNode;
@@ -9,8 +10,8 @@ import dk.sdu.kpm.graph.KPMGraph;
 
 class NodeRemovePerturbation extends BasePerturbation<KPMGraph>{
 
-    public NodeRemovePerturbation(){
-        super();
+    public NodeRemovePerturbation(KPMSettings kpmSettings){
+        super(kpmSettings);
     }
 
 	@Override

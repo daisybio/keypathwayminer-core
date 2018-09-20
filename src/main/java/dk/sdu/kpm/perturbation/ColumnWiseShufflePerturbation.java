@@ -1,5 +1,6 @@
 package dk.sdu.kpm.perturbation;
 
+import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.logging.KpmLogger;
 import dk.sdu.kpm.taskmonitors.IKPMTaskMonitor;
 import dk.sdu.kpm.taskmonitors.KPMDummyTaskMonitor;
@@ -14,8 +15,8 @@ import java.util.logging.Level;
  * Created by Martin on 24-01-2015.
  */
 public class ColumnWiseShufflePerturbation extends BasePerturbation<String> {
-    public ColumnWiseShufflePerturbation(){
-        super();
+    public ColumnWiseShufflePerturbation(KPMSettings kpmSettings){
+        super(kpmSettings);
 
         this.nodeIDs = new ArrayList<String>();
     }
@@ -72,7 +73,7 @@ public class ColumnWiseShufflePerturbation extends BasePerturbation<String> {
                 continue;
             }
 
-            IndexRandomizer cellRandomizer = new IndexRandomizer(column.length);
+            IndexRandomizer cellRandomizer = new IndexRandomizer(column.length, kpmSettings);
 
             for(int i = 0; i < column.length; i++){
                 datasetMatrix[columnIndex][i] = 0;

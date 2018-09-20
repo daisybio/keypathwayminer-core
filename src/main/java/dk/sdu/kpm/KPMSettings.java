@@ -296,6 +296,13 @@ public class KPMSettings {
 
     public volatile double FDR_CUTOFF = 0.05;
     public volatile boolean USE_INDIVIDUAL_PVALUES = true;
+    public volatile int PERC_PERTURBATION = 25;
+
+    // default no filter
+    public volatile int MIN_NETWORK_SIZE = 0;
+    public volatile int MAX_NETWORK_SIZE = Integer.MAX_VALUE;
+    // number of sampled networks per size
+    public volatile int NR_SAMPLES_BACKROUND = 100;
 
 
 

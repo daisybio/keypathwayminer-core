@@ -3,25 +3,26 @@ package dk.sdu.kpm.perturbation;
 import java.util.ArrayList;
 import java.util.List;
 
+import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.perturbation.IPerturbation.PerturbationTags;
 
 public class PerturbationService {
-	public static IPerturbation getPerturbation(PerturbationTags tag){
+	public static IPerturbation getPerturbation(PerturbationTags tag, KPMSettings kpmSettings){
 		switch (tag) {
 		case NodeSwap:
-			return new NodeSwapPerturbation();
+			return new NodeSwapPerturbation(kpmSettings);
 		case EdgeRemoval:
-			return new EdgeRemovePerturbation();
+			return new EdgeRemovePerturbation(kpmSettings);
 		case NodeRemoval:
-			return new NodeRemovePerturbation();
+			return new NodeRemovePerturbation(kpmSettings);
 		case EdgeRewire:
-			return new EdgeRewirePerturbation();
+			return new EdgeRewirePerturbation(kpmSettings);
 		default:
 			break;
 		}
 		
 		// Default is just NodeSwap
-		return new NodeSwapPerturbation();
+		return new NodeSwapPerturbation(kpmSettings);
 	}
 	
 	public static List<PerturbationTags> getPerturbationTags(){

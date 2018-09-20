@@ -218,7 +218,7 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         double sum = 0.0;
         double sumGeneral = 0.0;
         for(GeneNode n : this.getVertices()){
-            //double nrNode = this.getNeighborCount(n)*1.0;
+            //double nrNode = k.getNeighborCount(n)*1.0;
             double nrNode = 1.0;
             sum+=n.getAveragePvalue().get("L1")*nrNode;
             sumGeneral+= n.getPvalue()*nrNode;

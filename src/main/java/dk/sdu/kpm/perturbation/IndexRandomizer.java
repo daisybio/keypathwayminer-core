@@ -1,28 +1,38 @@
 package dk.sdu.kpm.perturbation;
 
+import dk.sdu.kpm.KPMSettings;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Random;
 
 /**
  * Created by Martin on 24-01-2015.
+ * Modified by Anne on 20-09-2018
  */
 public class IndexRandomizer {
+    // make sure the instances of random are always the same as in the main
+    // program. Needed for reproducibility.
+    private KPMSettings kpmSettings;
     private Random random;
 
     private ArrayList<Integer> indexList;
 
     private int indexSize;
 
-    public IndexRandomizer(int indexSize){
+    public IndexRandomizer(int indexSize, KPMSettings kpmSettings){
+        this.kpmSettings = kpmSettings;
         this.indexList = new ArrayList<Integer>();
         this.indexSize = indexSize;
         for(int i = 0; i < indexSize; i++){
             this.indexList.add(i);
         }
         // Get random number generator
-        this.random = new Random();
-        this.random.setSeed(Calendar.getInstance().getTimeInMillis());
+        this.random = kpmSettings.R;
+        // seed should be set by the main program
+        //this.random.setSeed(Calendar.getInstance().getTimeInMillis());
+
+
     }
 
     public int getNextRandomIndex(){

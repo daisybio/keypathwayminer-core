@@ -1,5 +1,6 @@
 package dk.sdu.kpm.perturbation;
 
+import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.taskmonitors.IKPMTaskMonitor;
 import dk.sdu.kpm.graph.KPMGraph;
 
@@ -14,12 +15,14 @@ import java.util.Random;
  */
 class BasePerturbation<T> implements IPerturbation<T> {
     protected IndexRandomizer randomizer;
+    protected KPMSettings kpmSettings;
 
-    protected BasePerturbation(){
+    protected BasePerturbation(KPMSettings kpmSettings){
+    	this.kpmSettings = kpmSettings;
     }
 
     protected void initIndexRandomizer(int indexSize){
-        this.randomizer = new IndexRandomizer(indexSize);
+        this.randomizer = new IndexRandomizer(indexSize, kpmSettings);
     }
 
     protected int getNextRandomIndex(){

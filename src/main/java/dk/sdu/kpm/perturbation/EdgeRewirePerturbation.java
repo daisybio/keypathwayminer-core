@@ -3,6 +3,7 @@ package dk.sdu.kpm.perturbation;
 import java.util.HashSet;
 import java.util.LinkedList;
 
+import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.taskmonitors.IKPMTaskMonitor;
 import dk.sdu.kpm.taskmonitors.KPMDummyTaskMonitor;
 import dk.sdu.kpm.graph.KPMGraph;
@@ -11,8 +12,8 @@ import java.util.Random;
 
 class EdgeRewirePerturbation extends BasePerturbation<KPMGraph>{
 
-    public EdgeRewirePerturbation(){
-        super();
+    public EdgeRewirePerturbation(KPMSettings kpmSettings){
+        super(kpmSettings);
     }
 
 	private HashSet<String> edgeAsNodeIDs;
@@ -51,8 +52,9 @@ class EdgeRewirePerturbation extends BasePerturbation<KPMGraph>{
 
         int nrEdgesToRewire = (int)Math.ceil(((double)edges.size() / 100) * percentageToPermute);
 		int total = (int)Math.ceil(((double)edges.size() / 100) * percentageToPermute);
-                Random random = new Random();
-                random.setSeed(Calendar.getInstance().getTimeInMillis());
+                Random random = this.kpmSettings.R;
+                // seed set by general settings.
+                //random.setSeed(Calendar.getInstance().getTimeInMillis());
         // Starting the algorithm
 		while(nrEdgesToRewire > 1){
 			taskMonitor.setProgress((double)((double)1-((double) nrEdgesToRewire)/((double)total)));

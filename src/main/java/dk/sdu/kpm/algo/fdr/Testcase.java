@@ -53,6 +53,7 @@ public class Testcase {
             double stats = 0.0;
             for(int j = 0; j<=25; j++){
                 RandomSubgraph rs = new RandomSubgraph(kpmGraph, i, false, "/home/anne/Masterarbeit/Testing/distribution/"+i+j, this.kpmSettings);
+                // TODO: dummy
                 rs.calculateNetworkScore("sum");
                 stats+=rs.getGeneralTeststat();
             }
