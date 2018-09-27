@@ -299,6 +299,7 @@ public class KPMSettings {
     public volatile int PERC_PERTURBATION = 25;
 
     public String RANKING_METHOD = "mean";
+    public int HIGH_DEGREE_NODES = 20;
 
     // default no filter
     public volatile int MIN_NETWORK_SIZE = 0;
