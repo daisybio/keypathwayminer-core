@@ -298,6 +298,8 @@ public class KPMSettings {
     public volatile boolean USE_INDIVIDUAL_PVALUES = true;
     public volatile int PERC_PERTURBATION = 25;
 
+    public String RANKING_METHOD = "mean";
+
     // default no filter
     public volatile int MIN_NETWORK_SIZE = 0;
     public volatile int MAX_NETWORK_SIZE = Integer.MAX_VALUE;

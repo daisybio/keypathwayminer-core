@@ -17,6 +17,8 @@ public class PerturbationService {
 			return new NodeRemovePerturbation(kpmSettings);
 		case EdgeRewire:
 			return new EdgeRewirePerturbation(kpmSettings);
+		case DegreeAwareNodeSwap:
+			return new DegreeAwareNodeSwap(kpmSettings);
 		default:
 			break;
 		}
@@ -32,6 +34,7 @@ public class PerturbationService {
 		returnList.add(PerturbationTags.NodeRemoval);
 		returnList.add(PerturbationTags.EdgeRemoval);
 		returnList.add(PerturbationTags.EdgeRewire);
+		returnList.add(PerturbationTags.DegreeAwareNodeSwap);
 		
 		return returnList;
 	}

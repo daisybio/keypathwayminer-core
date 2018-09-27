@@ -49,10 +49,11 @@ public class ProbabilisticRunner implements Runnable {
     private String outdir;
 
     private volatile KPMSettings kpmSettings;
+    private IPerturbation.PerturbationTags tag;
 
     public ProbabilisticRunner(String runId, IKPMTaskMonitor taskMonitor,
                                IKPMRunListener listener, KPMSettings settings, KPMGraph graph2,
-                               String outdir) {
+                               String outdir, IPerturbation.PerturbationTags tag) {
         this.runId = runId;
         this.taskMonitor = taskMonitor;
         this.listener = listener;
@@ -62,6 +63,7 @@ public class ProbabilisticRunner implements Runnable {
         this.copyKPMSettings = false;
         this.graph2 = graph2;
         this.outdir = outdir;
+        this.tag = tag;
         taskMonitor.setTitle("Key Pathway Miner");
     }
 
@@ -88,12 +90,12 @@ public class ProbabilisticRunner implements Runnable {
             // String newpath =
             Files.createDirectories(Paths.get(outdir));
             //kpmSettings.AGGREGATION_METHOD = "mean";
-            //Testcase tc = new Testcase(this.kpmSettings.MAIN_GRAPH, this.kpmSettings);
+            //Testcase tc = new Testcase(this.kpmSettings.MAIN_GRAPH, this.kpmSettings, "/home/anne/Documents/Master/MA/pipeline_new/sample_networks/StringDB/");
             //tc.createTestcases();
             //tc.createRandomDistribution();
             //exit(0);
 
-            IPerturbation<KPMGraph> ps = PerturbationService.getPerturbation(IPerturbation.PerturbationTags.NodeSwap, kpmSettings);
+            IPerturbation<KPMGraph> ps = PerturbationService.getPerturbation(IPerturbation.PerturbationTags.DegreeAwareNodeSwap, kpmSettings);
                 System.out.println("permute");
             this.graph2 = ps.execute(kpmSettings.PERC_PERTURBATION, kpmSettings.MAIN_GRAPH, new KPMDummyTaskMonitor());
             System.out.println("permute finsihed");

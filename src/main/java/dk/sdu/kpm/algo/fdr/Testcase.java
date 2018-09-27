@@ -1,11 +1,16 @@
 package dk.sdu.kpm.algo.fdr;
 
 import dk.sdu.kpm.KPMSettings;
+import dk.sdu.kpm.graph.GeneNode;
 import dk.sdu.kpm.graph.KPMGraph;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -13,27 +18,47 @@ public class Testcase {
 
     KPMGraph kpmGraph;
     KPMSettings kpmSettings;
+    String directory;
 
 
-    public Testcase(KPMGraph kpmGraph, KPMSettings kpmSettings){
+    public Testcase(KPMGraph kpmGraph, KPMSettings kpmSettings, String directory){
         this.kpmGraph = kpmGraph;
         this.kpmSettings = kpmSettings;
-
+        this.directory = directory;
     }
 
     public void createTestcases(){
-        Random r = new Random(1235);
+        Random r = kpmSettings.R;
         ArrayList<RandomSubgraph> al = new ArrayList<RandomSubgraph>();
+        // Make sure that no network size is drawn twice.
+        ArrayList<Integer> visited = new ArrayList<Integer>();
         for(int i =0; i<20; i++) {
             int j = r.nextInt(100);
+            if(visited.contains(j)){
+                i--;
+                continue;
+            }
+            visited.add(j);
        // int j = 5000;
             boolean overlap = false;
-            RandomSubgraph rs = new RandomSubgraph(kpmGraph, j, false, "/home/anne/Masterarbeit/Test_pipeline/sample_networks/StringDB/"+j , this.kpmSettings);
+            try {
+                Files.createDirectories(Paths.get(directory));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            RandomSubgraph rs = new RandomSubgraph(kpmGraph, j, false, directory+j , this.kpmSettings);
             for(RandomSubgraph rr: al){
-                if(rs.getVertices().containsAll(rr.getVertices())){
-                    i--;
-
-                    break;
+                boolean cond = false;
+                for(GeneNode n: rr.getVertices()) {
+                    if (rs.getVertices().contains(n)) {
+                        i--;
+                        cond = true;
+                        overlap=true;
+                        break;
+                    }
+                    if(cond){
+                        break;
+                    }
                 }
             }
             if(overlap){
@@ -41,8 +66,8 @@ public class Testcase {
             }
             else {
                 al.add(rs);
-                rs.writeGraphToFile("/home/anne/Masterarbeit/Test_pipeline/sample_networks/StringDB" +
-                        "/" + j, j + "", false);
+                rs.writeGraphToFile(directory +
+                        File.separator + j, j + "", false);
             }
         }
     }

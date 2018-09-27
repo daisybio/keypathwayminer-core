@@ -20,7 +20,7 @@ public interface IPerturbation<T> {
 	
 	public enum PerturbationTags{
 		// Graph perturbations:
-        NodeSwap, EdgeRemoval, NodeRemoval, EdgeRewire,
+        NodeSwap, EdgeRemoval, NodeRemoval, EdgeRewire, DegreeAwareNodeSwap,
 
         // Dataset perturbations:
         ColumnWiseShuffle

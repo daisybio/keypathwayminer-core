@@ -26,6 +26,7 @@ import java.util.logging.Logger;
 
 import dk.sdu.kpm.utils.Comparison;
 import dk.sdu.kpm.utils.Comparator;
+import org.apache.commons.collections15.map.HashedMap;
 import org.apache.commons.math3.stat.inference.MannWhitneyUTest;
 
 public class FDRGreedy implements Serializable {
@@ -131,7 +132,8 @@ public class FDRGreedy implements Serializable {
         // TODO:verbesserungswürdige Rückgabe des Gesamtergebnisses.
         // letzes Ergebnis ist das reconciled result
         //toReturn.add(reconciledResult);
-        //toReturn = rankAndTrimResults(toReturn, kpmSettings.NUM_SOLUTIONS);
+        //toReturn = rankAndTrimResults(toReturn, 20);
+        //toReturn = pruneAll(toReturn);
         return toReturn;
     }
 
@@ -146,9 +148,68 @@ public class FDRGreedy implements Serializable {
     Improve generated Results by exchaning low scoring nodes with high scoring nodes
     while still keeping the candidate network connected
      */
-    private List<Result> pruneNetworks(){
+    private RandomSubgraph pruneNetworks(RandomSubgraph rs){
+        // non member ordered in increasing order
+        Map <GeneNode, Integer> degrees = new HashedMap<GeneNode, Integer>();
+        PriorityQueue<GeneNode> nonMembers = new PriorityQueue<GeneNode>(new java.util.Comparator<GeneNode>() {
+            @Override
+            public int compare(GeneNode o1, GeneNode o2) {
+                if (Math.abs(o1.getPvalue()) <= Math.abs(o2.getPvalue())) {
+                    return -1;
+                } else {
+                    return 1;
+                }
+            }
+        });
+        // members ordered in decreasing order
+        PriorityQueue<GeneNode> members = new PriorityQueue<GeneNode>(new java.util.Comparator<GeneNode>() {
+            @Override
+            public int compare(GeneNode o1, GeneNode o2) {
+                if (Math.abs(o1.getPvalue()) <= Math.abs(o2.getPvalue())) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            }
+        });
+        for(GeneNode n: rs.getVertices()){
+            members.add(n);
+            degrees.put(n, rs.getNeighborCount(n));
+            for(GeneNode neigh: rs.getNeighbors(n)){
+                if(!rs.containsVertex(neigh)){
+                    nonMembers.add(neigh);
+                }
+            }
+        }
 
-        return null;
+
+        while(members.peek()!=null && nonMembers.peek()!=null && members.peek().getPvalue()>nonMembers.peek().getPvalue()){
+            boolean condition = true;
+                for(GeneNode n: rs.getNeighbors(members.peek())){
+                    if(degrees.get(n)==1){
+                        condition = false;
+                    }
+                }
+                if(condition) {
+                    rs.removeVertex(members.poll());
+                    rs.addVertex(nonMembers.poll());
+                }
+                // remove first from stack, such that next worse node gets exchanged
+                // with best node in nonMember queue.
+                // This should keep the graph connected
+                else{
+                    members.poll();
+                }
+        }
+        return rs;
+    }
+
+    private List<Result> pruneAll(List<Result> seedNets){
+        List<Result> rlist = new ArrayList<Result>();
+        for(Result rs : seedNets){
+            rlist.add(pruneNetworks((RandomSubgraph) rs));
+        }
+        return rlist;
     }
 
     private RandomSubgraph calculateEdgeWeight(List<Result> seedNets) {
@@ -187,7 +248,24 @@ public class FDRGreedy implements Serializable {
         List<Result> result = new ArrayList<Result>();
         for (Result r : seedNets) {
             RandomSubgraph res = (RandomSubgraph) r;
-            res.setPerNodeScore(res.getGeneralTeststat()/res.getVertexCount());
+            if(kpmSettings.RANKING_METHOD.equals("mean")) {
+                res.setPerNodeScore(res.getGeneralTeststat() / res.getVertexCount());
+            }
+            else if (kpmSettings.RANKING_METHOD.equals("median")){
+                double[]  d = new double[((RandomSubgraph) r).getVertexCount()];
+                int counter = 0;
+                for (GeneNode n: res.getVertices()) {
+                    d[counter] = n.getPvalue();
+                    counter++;
+                }
+                Arrays.sort(d);
+                int midIndex = (int) Math.floor(res.getVertexCount()/2);
+                res.setPerNodeScore(d[midIndex]);
+            }
+            else{
+                // default to mean
+                res.setPerNodeScore(res.getGeneralTeststat() / res.getVertexCount());
+            }
         }
         Collections.sort(seedNets, new java.util.Comparator<Result>() {
             @Override
@@ -198,10 +276,12 @@ public class FDRGreedy implements Serializable {
             }
         });
 
+        //
+        nrResultsToReturn = Math.min(nrResultsToReturn, seedNets.size());
         for(int i = 0; i<nrResultsToReturn; i++){
             result.add(seedNets.get(i));
         }
-    return seedNets;
+    return result;
     }
 
     private List<Result> removeDuplicates(List<Result> seedNets) {
