@@ -30,13 +30,13 @@ class DegreeAwareNodeSwap extends BasePerturbation<KPMGraph>{
 
     @Override
     public String getName() {
-        return "Node label permutation";
+        return "Degree aware Node label permutation";
     }
 
 
     @Override
     public PerturbationTags getTag() {
-        return PerturbationTags.NodeSwap;
+        return PerturbationTags.DegreeAwareNodeSwap;
     }
 
     /**
@@ -58,14 +58,14 @@ class DegreeAwareNodeSwap extends BasePerturbation<KPMGraph>{
             taskMonitor.setStatusMessage("Permuting...");
 
             KPMGraph graph = new KPMGraph(currentGraph);
-        try(BufferedWriter bw = new BufferedWriter(
-                new FileWriter("/home/anne/Masterarbeit/Testing/degreeDistNodeSwap"+kpmSettings.SEED+".txt"))) {
+     //   try(BufferedWriter bw = new BufferedWriter(
+       //         new FileWriter("/home/anne/Masterarbeit/Testing/degreeDistNodeSwap"+kpmSettings.SEED+".txt"))) {
             HashSet<GeneNode> swappedNodes = new HashSet<GeneNode>();
             GeneNode[] nodes = graph.getVertices().toArray(new GeneNode[graph.getVertices().size()]);
             Arrays.sort(nodes, new Comparator<GeneNode>() {
                 @Override
                 public int compare(GeneNode o1, GeneNode o2) {
-                    if((currentGraph.getNeighborCount(o2)-currentGraph.getNeighborCount(o1))>0){
+                    if((graph.getNeighborCount(o1)-graph.getNeighborCount(o2))<0){
                 return -1;
                     }
                     else{
@@ -76,11 +76,11 @@ class DegreeAwareNodeSwap extends BasePerturbation<KPMGraph>{
 
             int counter= 0;
             for(GeneNode n: nodes){
-                if(currentGraph.getNeighborCount(n)>kpmSettings.HIGH_DEGREE_NODES){
+                if(graph.getNeighborCount(n)>kpmSettings.HIGH_DEGREE_NODES){
                     counter++;
                 }
                 else{
-                    break;
+                    continue;
                 }
             }
             int nrNodesToShift = (int) Math.ceil(((double) nodes.length / 100) * percentageToPermute);
@@ -89,12 +89,12 @@ class DegreeAwareNodeSwap extends BasePerturbation<KPMGraph>{
             // Fill the list with edges indexes. Will be used to draw nodes to be removed.
             this.initIndexRandomizer(nodes.length);
 
-            int[] degreeCounter = new int[currentGraph.getVertexCount() + 1];
+            int[] degreeCounter = new int[graph.getVertexCount() + 1];
             Map<Integer, ArrayList<GeneNode>> degree2NodeId = new HashMap<Integer, ArrayList<GeneNode>>();
-            for (GeneNode n : currentGraph.getVertices()) {
-                degreeCounter[currentGraph.getNeighborCount(n)] += 1;
-                degree2NodeId.putIfAbsent(currentGraph.getNeighborCount(n), new ArrayList<GeneNode>());
-                degree2NodeId.get(currentGraph.getNeighborCount(n)).add(n);
+            for (GeneNode n : graph.getVertices()) {
+                degreeCounter[graph.getNeighborCount(n)] += 1;
+                degree2NodeId.putIfAbsent(graph.getNeighborCount(n), new ArrayList<GeneNode>());
+                degree2NodeId.get(graph.getNeighborCount(n)).add(n);
             }
 
             int binSize = 100;
@@ -115,23 +115,25 @@ class DegreeAwareNodeSwap extends BasePerturbation<KPMGraph>{
                 }
             }
 
-            int c= 20;
+            int c = kpmSettings.NR_HIGH_DEGREE;
+            taskMonitor.setStatusMessage("Number of high degree nodes: "+ c);
             while (nrNodesToShift > 1) {
                 taskMonitor.setProgress((double) ((double) 1 - ((double) nrNodesToShift) / ((double) total)));
 
                 int ind = 0;
-                // Get random node
-                if(counter>0){
+                // Get random node of high degree node
+                if(c>0 && counter>0){
                     c--;
-                    ind = kpmSettings.R.nextInt(counter);
+                    ind = kpmSettings.R.nextInt(counter)+nodes.length-1-counter;
                 }
                 else{
+                    // some other random node
                     ind = getNextRandomIndex();
                 }
                 GeneNode node1 = nodes[ind];
 
                 // Get random node with similar degree
-                int deg = currentGraph.getNeighborCount(node1);
+                int deg = graph.getNeighborCount(node1);
                 ArrayList<GeneNode> cur = new ArrayList<GeneNode>();
                 // System.out.println(deg);
                 int bin = invertDeg.get(deg);
@@ -151,7 +153,7 @@ class DegreeAwareNodeSwap extends BasePerturbation<KPMGraph>{
                     continue;
                 }
 
-                bw.write(currentGraph.getNeighborCount(node1)+"\t"+currentGraph.getNeighborCount(node2)+"\n");
+                //bw.write(currentGraph.getNeighborCount(node1)+"\t"+currentGraph.getNeighborCount(node2)+"\n");
                 // Shifting all edges between them, assuming we're iterating by reference
                 for (String[] edge : graph.getEdgeList()) {
 
@@ -177,10 +179,10 @@ class DegreeAwareNodeSwap extends BasePerturbation<KPMGraph>{
 
                 nrNodesToShift -= 2;
             }
-        }
-        catch(IOException e){
-            e.printStackTrace();
-        }
+      //  }
+    //    catch(IOException e){
+      //      e.printStackTrace();
+        //}
         return graph;
     }
 

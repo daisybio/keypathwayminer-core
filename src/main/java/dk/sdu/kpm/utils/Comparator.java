@@ -7,5 +7,4 @@ public enum Comparator {
     GT, // greater than
     LET // less or equal than
 
-
 }

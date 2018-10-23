@@ -282,13 +282,14 @@ public class KPMSettings {
 
     public volatile int TOTAL_EDGE_HITS_MAX = 0;
 
-    public Comparator COMPARATOR = Comparator.LET;
+
 
     public volatile HashMap<Integer, String> INDEX_L_MAP = new HashMap<Integer, String>();
 
     public volatile List<String> VALIDATION_GOLDSTANDARD_NODES = new ArrayList<String>();
 
     // Variables for FDR
+    public Comparator COMPARATOR = Comparator.LET;
 
     public double SIGNIFICANCE_LEVEL = 0.05;
 
@@ -299,13 +300,19 @@ public class KPMSettings {
     public volatile int PERC_PERTURBATION = 25;
 
     public String RANKING_METHOD = "mean";
-    public int HIGH_DEGREE_NODES = 20;
+    public int HIGH_DEGREE_NODES = 250;
+    public int NR_HIGH_DEGREE = 20;
 
     // default no filter
     public volatile int MIN_NETWORK_SIZE = 0;
     public volatile int MAX_NETWORK_SIZE = Integer.MAX_VALUE;
     // number of sampled networks per size
-    public volatile int NR_SAMPLES_BACKROUND = 100;
+    public volatile int NR_SAMPLES_BACKROUND = 1000;
+
+    public volatile  String TERMINATION_CRITERION = "largest";
+    public boolean SLIDING_WINDOW = false;
+
+    public String BACKGROUND = "greedy";
 
 
 
@@ -527,6 +534,22 @@ public class KPMSettings {
         str += "MIN_PER = " + MIN_PER + lineSep;
         str += "INC_PER = " + INC_PER + lineSep;
         str += "MAX_PER = " + MAX_PER + lineSep;
+
+        str +="COMPARATOR= "+ COMPARATOR+lineSep;
+        str +="SIGNIFICANCE_LEVEL= "+ SIGNIFICANCE_LEVEL+lineSep;
+        str +="FDR_CUTOFF= "+FDR_CUTOFF+lineSep;
+        //str +="USE_INDIVIDUAL_PVALUES= "+USE_INDIVIDUAL_PVALUES+lineSep; //currently has no effect
+        str +="PERC_PERMUTATION= "+PERC_PERTURBATION+lineSep;
+        str +="RANKING_METHOD= "+RANKING_METHOD+lineSep;
+        str +="HIGH_DEGREE_NODES= "+HIGH_DEGREE_NODES+lineSep;
+        str += "NR_HIGH_DEGREE =" +   NR_HIGH_DEGREE +lineSep;
+        str += "MIN_NETWORK_SIZE =" +   MIN_NETWORK_SIZE +lineSep;
+        str += "MAX_NETWORK_SIZE =" +   MAX_NETWORK_SIZE +lineSep;
+        str += "NR_SAMPLES_BACKGROUND =" +   NR_SAMPLES_BACKROUND +lineSep;
+        str += "TERMINATION_CRITERION =" +   TERMINATION_CRITERION +lineSep;
+        str += "BACKGROUND =" +   BACKGROUND +lineSep;
+        str += "SLIDING_WINDOW =" +   SLIDING_WINDOW +lineSep;
+
         
         
         return str;

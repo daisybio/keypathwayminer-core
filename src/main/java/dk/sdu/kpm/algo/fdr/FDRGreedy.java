@@ -44,13 +44,26 @@ public class FDRGreedy implements Serializable {
 
     private volatile KPMSettings kpmSettings;
 
-    boolean general;
-
-    //thread safe
-    //private volatile DistributionGenerator dg; ??
-    private final DistributionGenerator dg;
     ConcurrentHashMap<GeneNode, Boolean> visited;
 
+    boolean general;
+
+
+
+    // Store whether we are currently searching networks or whether we are
+    // currently generating networks of a certain size.
+    boolean isSearch;
+    //used when searching otherwise null
+    private final DistributionGenerator dg;
+
+    //used when generating
+    int nrSamples = 0;
+    int maxSize = Integer.MAX_VALUE;
+    GeneNode start;
+
+    /*
+    Use this constructor to generate candidate networks.
+     */
     public FDRGreedy(KPMGraph g, IKPMTaskMonitor taskMonitor, KPMSettings settings, DistributionGenerator dg, boolean general) {
         this.g = g;
         this.copy = g;
@@ -60,7 +73,31 @@ public class FDRGreedy implements Serializable {
         this.kpmSettings = settings;
         this.dg = dg;
         this.general = general;
+        this.maxSize=settings.MAX_NETWORK_SIZE;
+        this.nrSamples = Integer.MAX_VALUE;
+        this.isSearch = true;
     }
+    /*
+    Use this constructor to create the "random" background
+
+     */
+    public FDRGreedy(KPMGraph g, IKPMTaskMonitor taskMonitor, KPMSettings settings, boolean general, int maxSize,
+                     int nrSamples) {
+        this.g = g;
+        this.copy = g;
+        this.taskMonitor = taskMonitor;
+        this.k = settings.GENE_EXCEPTIONS;
+        this.l_map = settings.CASE_EXCEPTIONS_MAP;
+        this.kpmSettings = settings;
+        this.dg = null;
+        this.general = general;
+        this.maxSize=maxSize;
+        this.nrSamples = nrSamples;
+        this.isSearch=false;
+
+    }
+
+
 
 
     public List<Result> getResults() {
@@ -72,22 +109,32 @@ public class FDRGreedy implements Serializable {
         List<Result> toReturn = new ArrayList<Result>();
         int nodesComputed = 0;
         int numV = g.getVertexCount();
-
-
         ExecutorService pool = Executors.newFixedThreadPool(kpmSettings.NUMBER_OF_PROCESSORS);
+
 
         List<Future<Result>> futures = new LinkedList<Future<Result>>();
 
 
-        // for computational feasibility seeds need values need to be better than a certain
-        // threshold.
-
-        // TODO: make the concurrent execution more efficient
         int counter = 0;
         visited = new ConcurrentHashMap<GeneNode, Boolean>();
 
-        for (final GeneNode node : g.getVertices()) {
+        // starting nodes are selected from all the nodes in the network
+        // to avoid substructure in network effects those are shuffled
+        List<GeneNode> l = new ArrayList<GeneNode>();
+        l.addAll(g.getVertices());
+        Collections.shuffle(l, kpmSettings.R);
+
+        // iterate over nodes
+        for (final GeneNode node : l) {
             visited.put(node, false);
+
+            // Stop loop if enough samples have been taken
+            if(!isSearch && counter>=nrSamples){
+                break;
+            }
+
+            // for computational feasibility seeds need values need to be better than a certain
+            // threshold, say top 20% (is user defined)
             if (checkFitness(node, general)) {
                 futures.add(pool.submit(new Callable<Result>() {
 
@@ -127,18 +174,44 @@ public class FDRGreedy implements Serializable {
         toReturn = filterNetworks(toReturn, 0, Integer.MAX_VALUE);
         // This step needs to be done before duplicates are removed
         // to retain correct weights for solutions
-        //RandomSubgraph reconciledResult = calculateEdgeWeight(toReturn);
+        RandomSubgraph reconciledResult = calculateEdgeWeight(toReturn);
+        RandomSubgraph nodeReconciledResult = calculateNodeWeight(toReturn);
         toReturn = removeDuplicates(toReturn);
-        // TODO:verbesserungswürdige Rückgabe des Gesamtergebnisses.
         // letzes Ergebnis ist das reconciled result
+        //
+        //RandomSubgraph reconciledResult = calculateEdgeWeight(toReturn);
+        //RandomSubgraph nodeReconciledResult2 = calculateNodeWeight(toReturn);
         //toReturn.add(reconciledResult);
+        //toReturn.add(nodeReconciledResult);
+        //toReturn.add(nodeReconciledResult2);
         //toReturn = rankAndTrimResults(toReturn, 20);
         //toReturn = pruneAll(toReturn);
+
+        /*System.out.println(this.kpmSettings.MAIN_GRAPH.getVertexCount());
+        //prune graph remove all nodes of degree 1 or smaller
+        for (GeneNode n: nn){
+            this.kpmSettings.MAIN_GRAPH.addVertex(n);
+        }
+        for(int i =0; i<ee.size(); i++){
+            this.kpmSettings.MAIN_GRAPH.addEdge(ee.get(i), start.get(i), end.get(i));
+        }
+        // for good measure also update backup
+        this.kpmSettings.MAIN_GRAPH_BACKUP = this.kpmSettings.MAIN_GRAPH;
+
+        List<Result> resi = new ArrayList<>();
+        for(Result r: toReturn){
+            resi.add(extendNetwork((RandomSubgraph)r, false));
+        }
+        System.out.println(this.kpmSettings.MAIN_GRAPH.getVertexCount());
+        resi = pruneAll(resi);
+        return resi;*/
         return toReturn;
     }
 
     private Result fromStartingNode(GeneNode startingNode) {
         RandomSubgraph sd = new RandomSubgraph(startingNode);
+        //System.out.println(startingNode);
+        sd.add2lastNNodes(startingNode);
         sd = extendNetwork(sd, false);
         //extendSeedNetwork(sd);
         return sd;
@@ -185,11 +258,11 @@ public class FDRGreedy implements Serializable {
 
         while(members.peek()!=null && nonMembers.peek()!=null && members.peek().getPvalue()>nonMembers.peek().getPvalue()){
             boolean condition = true;
-                for(GeneNode n: rs.getNeighbors(members.peek())){
-                    if(degrees.get(n)==1){
+               /*  for(GeneNode n: rs.getNeighbors(members.peek())){
+                   if(degrees.get(n)==1){
                         condition = false;
                     }
-                }
+                }*/
                 if(condition) {
                     rs.removeVertex(members.poll());
                     rs.addVertex(nonMembers.poll());
@@ -235,12 +308,53 @@ public class FDRGreedy implements Serializable {
                 reconciledResult.addEdge(e, this.g.getEndpoints(e).getFirst(), this.g.getEndpoints(e).getSecond(), EdgeType.UNDIRECTED);
             }
         }
-        System.out.println(edgeCount);
-        System.out.println(seedNets.size());
-        reconciledResult.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
+        //System.out.println(edgeCount);
+        //System.out.println(seedNets.size());
+        //System.out.println(reconciledResult.getVertexCount());
+        if(reconciledResult.getVertexCount()>0) {
+            reconciledResult.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD, copy);
+        }
         return reconciledResult;
     }
 
+
+    private RandomSubgraph calculateNodeWeight(List<Result> seedNets) {
+        double threshold = 0.5;
+        Map<GeneNode, Integer> nodeCount = new HashMap<GeneNode, Integer>();
+
+        for (Result r : seedNets) {
+            RandomSubgraph res = (RandomSubgraph) r;
+            for (GeneNode node : res.getVertices()) {
+                if (nodeCount.containsKey(node)) {
+                    nodeCount.put(node, nodeCount.get(node) + 1);
+                } else {
+                    nodeCount.put(node, 1);
+                }
+            }
+        }
+        RandomSubgraph reconciledResult = new RandomSubgraph();
+        for (GeneNode node : nodeCount.keySet()) {
+            if (nodeCount.get(node) * 1.0 / seedNets.size() * 1.0 >= threshold) {
+                //if (edgeCount.get(e) > 1) {
+                reconciledResult.addVertex(node);
+            }
+        }
+        for(GeneNode n: reconciledResult.getVertices()){
+            for (GeneEdge e : copy.getOutEdges(n)) {
+                if (reconciledResult.containsVertex(copy.getEndpoints(e).getFirst()) &&
+                        reconciledResult.containsVertex(copy.getEndpoints(e).getSecond())) {
+                    reconciledResult.addEdge(e, new Pair<GeneNode>(copy.getEndpoints(e)), EdgeType.UNDIRECTED);
+                }
+            }
+        }
+        //System.out.println(edgeCount);
+        //System.out.println(seedNets.size());
+        // make sure the network size is greater 0; median needs an array length >0
+        if(reconciledResult.getVertexCount()>0) {
+            reconciledResult.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD,copy);
+        }
+        return reconciledResult;
+    }
     /*
     Networks are sorted by score before being returned.
      */
@@ -300,7 +414,7 @@ public class FDRGreedy implements Serializable {
                 res.add(ar[i]);
             }
         }
-        System.out.println("Number of duplicated networks: " + indx.size());
+        //System.out.println("Number of duplicated networks: " + indx.size());
         return res;
     }
 
@@ -329,18 +443,11 @@ public class FDRGreedy implements Serializable {
 
 
     private RandomSubgraph extendNetwork(RandomSubgraph sd, boolean hubCorrection) {
-        RandomSubgraph currentBest = null;
-        try(BufferedWriter bw = new BufferedWriter(new FileWriter("/home/anne/Masterarbeit/Testing/max_distance4.txt", true));
-                BufferedWriter b2 = new BufferedWriter(new FileWriter("/home/anne/Masterarbeit/Testing/scores4.txt", true));
-            BufferedWriter b3 = new BufferedWriter(new FileWriter("/home/anne/Masterarbeit/Testing/per_node_Score4.txt", true))) {
-
-            //RandomSubgraph sol = new RandomSubgraph(startingNode);
-            //starting node can be addedKPMGraph kpmGraph
-            //GeneNode st = new GeneNode(startingNode);
-
-            int noImprovementCounter = 0;
+        double minint = 0;
+        RandomSubgraph currentBest = sd;
             ArrayList<GeneNode> candidates = new ArrayList<GeneNode>();
             HashSet<GeneNode> queried = new HashSet<GeneNode>();
+            ArrayList<GeneNode> order = new ArrayList<GeneNode>();
 
             for (GeneNode n : sd.getVertices()) {
                 candidates.addAll(copy.getNeighbors(n));
@@ -357,8 +464,8 @@ public class FDRGreedy implements Serializable {
             });
             queue.addAll(candidates);
 
-            int allowedFails = 0;
             boolean condition = true;
+            Wrapper w = null;
             while (condition) {
                 GeneNode g = queue.poll();
                 if (g != null) {
@@ -366,18 +473,9 @@ public class FDRGreedy implements Serializable {
                         continue;
                     }
                     queried.add(g);
+                    order.add(g);
                     if (sd.addVertex(g)) {
-                        //Add all neighbour nodes of candidate node before checking the fitness to see if
-                        // node brings enough good neighbours -> idea: avoid hubnodes, that bring to much
-                        // junk
-                        // Hashmap stores if add was succesfull to not remove any node which was
-                        // in the network before after the fitness check.
-                        HashMap<GeneNode, Boolean> added = new HashMap<GeneNode, Boolean>();
-                    /*if(hubCorrection&&copy.getNeighborCount(g)>5){
-                        for(GeneNode neigh : copy.getNeighbors(g)){
-                            added.putIfAbsent(neigh,sd.addVertex(neigh));
-                        }
-                    }*/
+                        sd.add2lastNNodes(g);
                         if (checkFitness(sd, general)) {
                             for (GeneEdge e : copy.getOutEdges(g)) {
                                 if (sd.containsVertex(copy.getEndpoints(e).getFirst()) &&
@@ -386,51 +484,72 @@ public class FDRGreedy implements Serializable {
                                 }
                             }
                             queue.addAll(copy.getNeighbors(g));
-                            sd.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
-                            // Additive score aggregation score of candidate mus be below threshold
-                            double d = dg.getMeanTS(sd.getVertexCount()) - sd.getGeneralTeststat();
-                            bw.write(sd.id+"\t"+d+"\n");
-                            b2.write(sd.id+"\t"+sd.getGeneralTeststat()+"\n");
-                            b3.write(sd.id+"\t"+sd.getGeneralTeststat()/sd.getVertexCount()+"\n");
-                            if (sd.getMaxDistanceFromThresh() < dg.getMeanTS(sd.getVertexCount()) - sd.getGeneralTeststat()) {
-                                sd.setMaxDistanceFromThresh(dg.getMeanTS(sd.getVertexCount()) - sd.getGeneralTeststat());
-                                currentBest = sd;
-                                noImprovementCounter = 0;
-                            } else {
-                                noImprovementCounter++;
-                            }
+                            sd.add2ScoreTracker(sd.getGeneralTeststat());
+                            w = track(sd,dg, minint);
+
                         } else {
                             sd.removeVertex(g);
-                            sd.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
+                            // is this really necessary here?
+                            sd.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD, copy);
                             condition = false;
                         }
-                        //if(noImprovementCounter>5){
-                        //  condition = false;
-                        //}
-                        // remove neighbours of the candidate node again.
-                    /*if(hubCorrection&&copy.getNeighborCount(g)>5){
-                        for(GeneNode neigh : copy.getNeighbors(g)){
-                            if(added.get(neigh)) {
-                                sd.removeVertex(neigh);
-                            }
-                        }
-                    }*/
                     }
                 } else {
                     condition = false;
                 }
             }
-            //if(!checkFitness(sd, general)){
-            //    condition = false;
-
-            //}
-
-            //return sd;
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
+            if(isSearch && w!=null){
+                currentBest = returnBest(sd, w, order);
+            }
         return currentBest;
+    }
+
+    /*
+    Stores the best subnetwork
+     */
+    private Wrapper track(RandomSubgraph sd, DistributionGenerator dg, double minint){
+        if(!isSearch){
+            return new Wrapper(0, minint);
+        }
+        else{
+            if (Math.abs(sd.getGeneralTeststat()-dg.getMeanTS(sd.getVertexCount()))>minint) {
+                minint = Math.abs(sd.getGeneralTeststat()-dg.getMeanTS(sd.getVertexCount()));
+                return new Wrapper(sd.getVertexCount(), minint);
+            }
+            else{
+                return new Wrapper(sd.getMinInd(), minint);
+            }
+        }
+
+    }
+
+    /*
+    Returns the network which corresponds to the maximum distance of the score to the network
+    or the same network when this option is not selected
+     */
+    private RandomSubgraph returnBest(RandomSubgraph currentBest, Wrapper w, ArrayList<GeneNode> order){
+        RandomSubgraph fin = null;
+        if(kpmSettings.TERMINATION_CRITERION.equals("maximum_distance")) {
+            fin = new RandomSubgraph();
+            for (int i = 0; i < w.minInd; i++) {
+                GeneNode g = order.get(i);
+                fin.addVertex(g);
+                for (GeneEdge e : copy.getOutEdges(g)) {
+                    if (fin.containsVertex(copy.getEndpoints(e).getFirst()) &&
+                            fin.containsVertex(copy.getEndpoints(e).getSecond())) {
+                        fin.addEdge(e, new Pair<GeneNode>(copy.getEndpoints(e)), EdgeType.UNDIRECTED);
+                    }
+                }
+            }
+            fin.setMinInd(w.minInd);
+            fin.setScoreTracker(currentBest.getScoreTracker());
+            fin.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD, copy);
+        }
+        // default to largest graph that fullfills criterion.
+        else{
+            fin = currentBest;
+        }
+        return fin;
     }
 
 
@@ -439,88 +558,116 @@ public class FDRGreedy implements Serializable {
      * or single p-value per gene
      */
     private boolean checkFitness(GeneNode n, boolean general) {
+        double sig = kpmSettings.SIGNIFICANCE_LEVEL;
+        if(!isSearch){
+            sig = 1.0;
+        }
         boolean fit = false;
         if (!general) {
 
             // TODO: currently a random p value is chosen
             String akey = n.getAveragePvalue().keySet().
                     toArray(new String[n.getAveragePvalue().keySet().size()])[0];
-            if (Comparison.evalate(Math.abs(n.getAveragePvalue().get("L1")), kpmSettings.SIGNIFICANCE_LEVEL, kpmSettings.COMPARATOR)) {
+            if (Comparison.evalate(Math.abs(n.getAveragePvalue().get("L1")), sig , kpmSettings.COMPARATOR)) {
                 fit = true;
                 //System.out.println(n.nodeId+"\t"+fit);
             } else {
                 fit = false;
             }
         } else {
-            if (Comparison.evalate(Math.abs(n.getPvalue()), kpmSettings.SIGNIFICANCE_LEVEL, kpmSettings.COMPARATOR)) {
+            if (Comparison.evalate(Math.abs(n.getPvalue()), sig, kpmSettings.COMPARATOR)) {
                 fit = true;
             }
         }
         return fit;
     }
 
+
+
     /*
      * compare combined p value of the current subnetwork to the fdr of the random networks of that size.
      */
     private boolean checkFitness(RandomSubgraph sg, boolean general) {
         boolean fit = false;
-        sg.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
+        sg.calculateNetworkScore(kpmSettings.AGGREGATION_METHOD, copy);
+
+        //PHASE 1:
+        // Break of criterion when sampling graphs
+        // maxSize reached
+        if(!isSearch){
+            if(sg.getVertexCount()<=this.maxSize) {
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
+
+        //PHASE 2:
+        // break search off if maximum size is reached
+        if(sg.getVertexCount()>=kpmSettings.MAX_NETWORK_SIZE+1){
+            return false;
+        }
+        // should be redundant, because thresholds maximally as long as maximal network size
         if (sg.getVertices().size() >= dg.getThresholds().length) {
             return false;
         }
-        if (!general) {
-            // TODO: adapt mean
-            // refresh P value of subnetwork
-
-            // subnetwork pvalue must be smaller than threshold
-            if (kpmSettings.AGGREGATION_METHOD.equals("fisher")) {
-                if (sg.getPval() - dg.getThreshold(sg.getVertexCount()) < Double.MIN_VALUE) {
-                    fit = true;
+        if(!kpmSettings.SLIDING_WINDOW) {
+            if (!general) {
+                // subnetwork pvalue must be smaller than threshold
+                if (kpmSettings.AGGREGATION_METHOD.equals("fisher")) {
+                    if (Comparison.evalate(sg.getPval(), dg.getThreshold(sg.getVertexCount()), Comparator.LET)) {
+                        fit = true;
+                    }
+                } else {
+                    if (Comparison.evalate(sg.getTestStatistics(), dg.getMeanTS(sg.getVertexCount()), kpmSettings.COMPARATOR)) {
+                        fit = true;
+                    }
                 }
             } else {
-                if (sg.getTestStatistics() - dg.getMeanTS(sg.getVertexCount()) < Double.MIN_VALUE) {
-                    fit = true;
+                if (kpmSettings.AGGREGATION_METHOD.equals("fisher")) {
+                    if (Comparison.evalate(sg.getGeneralPval(), dg.getThreshold(sg.getVertexCount()), Comparator.LET)) {
+                        fit = true;
+                    }
+                } else {
+                    if (Comparison.evalate(sg.getGeneralTeststat(), dg.getMeanTS(sg.getVertexCount()), kpmSettings.COMPARATOR)) {
+                        fit = true;
+                    }
                 }
             }
-        } else {
-            if (kpmSettings.AGGREGATION_METHOD.equals("fisher")) {
-                if (sg.getGeneralPval() - dg.getThreshold(sg.getVertexCount()) < Double.MIN_VALUE) {
-                    fit = true;
+        }else{
+            //int size = (int) Math.floor(sg.getVertexCount()*0.67);
+            int size=sg.getN();
+            if (!general) {
+
+                // TODO: adapt mean
+                // refresh P value of subnetwork
+
+                // subnetwork pvalue must be smaller than threshold
+                if (kpmSettings.AGGREGATION_METHOD.equals("fisher")) {
+                    if (Comparison.evalate(sg.getPvalLastN(), dg.getThreshold(size), kpmSettings.COMPARATOR)) {
+                        fit = true;
+                    }
+                } else {
+                    if (Comparison.evalate(sg.getTestStatisticsLastN(), dg.getMeanTS(size), kpmSettings.COMPARATOR)) {
+                        fit = true;
+                    }
                 }
             } else {
-                if ((sg.getGeneralTeststat() - dg.getMeanTS(sg.getVertexCount())) < Double.MIN_VALUE) {
-                    fit = true;
+                if (kpmSettings.AGGREGATION_METHOD.equals("fisher")) {
+                    if (Comparison.evalate(sg.getGeneralPvalLastN(), dg.getThreshold(size), kpmSettings.COMPARATOR)) {
+                        fit = true;
+                    }
+                } else {
+                    if (Comparison.evalate(sg.getGeneralTeststatLastN(), dg.getMeanTS(size), kpmSettings.COMPARATOR)) {
+                        fit = true;
+                    }
                 }
             }
         }
         return fit;
-
-            /* double [] ts = new double[sg.getVertexCount()];
-                int counter = 0;
-                for(GeneNode cand : sg.getVertices()){
-                    ts[counter] = Math.abs(cand.getPvalue());
-                    //System.out.print(ts[counter]+"\t");
-                    counter++;
-                }
-                //System.out.println(ts);
-                //System.out.println(dg.getMeanTS(sg.getVertexCount()));
-                MannWhitneyUTest mw = new MannWhitneyUTest();
-                int ind = sg.getVertexCount();
-                while(!dg.getDistribution().keySet().contains(ind)){
-                    ind++;
-            }
-                double [] dummy = dg.getDistribution().get(ind);
-                //System.out.println(mw.mannWhitneyUTest(ts, dummy));
-                if(mw.mannWhitneyUTest(ts, dummy)<0.02){
-                    fit = true;
-                }
-               */
     }
 
-
-    private void mutate() {
-
-    }
 
     private volatile boolean isCancelled = false;
 
@@ -533,6 +680,18 @@ public class FDRGreedy implements Serializable {
 //        if(pool != null){
 //            pool.shutdownNow();
 //        }
+    }
+
+    /*
+    Inner class wrapper used to store one int and one double
+     */
+    private class Wrapper{
+        int minInd = 0;
+        double minDouble = 0.0;
+        private Wrapper(int i, double d){
+            this.minDouble = d;
+            this.minInd = i;
+        }
     }
 
 }

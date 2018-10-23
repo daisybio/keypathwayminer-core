@@ -50,6 +50,34 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         return generalTeststat;
     }
 
+
+ // Subscores for last N Nodes
+    private double generalTeststatLastN = -1;
+
+    public double getPvalLastN() {
+        return pvalLastN;
+    }
+
+    private double pvalLastN = 1.0;
+
+    public double getGeneralPvalLastN() {
+        return generalPvalLastN;
+    }
+
+    private double generalPvalLastN = 1.0;
+
+    public double getTestStatisticsLastN() {
+        return testStatisticsLastN;
+    }
+
+    private double testStatisticsLastN = -1;
+
+    public double getGeneralTeststatLastN() {
+        return generalTeststatLastN;
+    }
+
+
+
     private double generalTeststat = -1;
     private boolean is_significant = false;
     private double significanceLevel = 0.05;
@@ -82,6 +110,49 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     private double perNodeScore = -1.0;
 
 
+    public int getN() {
+        return n;
+    }
+
+    public void setN(int n) {
+        this.n = n;
+    }
+
+    //Stores the last n GeneNodes added in a run -> Sliding window approach
+    private int n = 20;
+
+
+
+    public List<GeneNode> getLastNNodes() {
+        return lastNNodes;
+    }
+
+    private List<GeneNode> lastNNodes = new LinkedList<>();
+
+
+    //score tracker
+    private List<Double> scoreTracker = new ArrayList();
+
+    public void setMinInd(int minInd) {
+        this.minInd = minInd;
+    }
+
+    public int getMinInd(){
+        return this.minInd;
+    }
+
+    private int minInd = 0;
+
+
+    public void add2ScoreTracker(double score){
+        this.scoreTracker.add(score);
+    }
+    public List<Double> getScoreTracker(){
+        return this.scoreTracker;
+    }
+    public void setScoreTracker(List<Double> scoreTracker){
+        this.scoreTracker = scoreTracker;
+    }
 
 
     /*
@@ -107,15 +178,28 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
 
     }
 
+    /*
+    Adds a Genenode to lastNNodes making sure, that the capacity n is not exceeded.
+     */
+    public void add2lastNNodes(GeneNode node){
+        if(lastNNodes.size()<n){
+            lastNNodes.add(node);
+        }
+        if(lastNNodes.size()>=n){
+            lastNNodes.remove(0);
+            lastNNodes.add(node);
+        }
+    }
+
+
+
     private void generateRandomSizeN(KPMGraph kpmGraph, int size, boolean includeBackgroundNodes, String filename) {
         Random rand = kpmSettings.R;
         int randomNodeIndex;
         GeneNode[] nodes = kpmGraph.getVertices().toArray(new GeneNode[kpmGraph.getVertices().size()]);
-        // TODO Array sorting for deterministic behaviour?
-        // Order lexicographically - nodeId
-        //Arrays.sort(nodes);
         GeneNode nextNode = null;
 
+        //Choose first node
         boolean first = false;
         while(!first) {
             randomNodeIndex = rand.nextInt(kpmGraph.getVertices().size());
@@ -137,7 +221,6 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
             nextNode = candidates.get(randomNodeIndex);
             //if node can be added, remove node from candidate list, but add all neighbours
             // do not sample nodes not contained in the expression data
-            //System.out.println((!kpmGraph.getBackNodesMap().containsKey(nextNode.nodeId)|| includeBackgroundNodes) );
             if ((!kpmGraph.getBackNodesMap().containsKey(nextNode.nodeId)|| includeBackgroundNodes) && this.addVertex(nextNode)) {
 
                 candidates.remove(randomNodeIndex);
@@ -160,14 +243,12 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
                 candidates.remove(randomNodeIndex);
             }
         }
-        //System.out.println(this.getVertices().size());
-        int degFree = calculateNetworkScore(kpmSettings.AGGREGATION_METHOD);
-        //System.out.println(this.getVertices().size());
+        calculateNetworkScore(kpmSettings.AGGREGATION_METHOD, kpmGraph);
         writeToFile(filename+"pvalsSamplewise.txt", filename+"nodeDist.txt", filename+"pvalsGeneral.txt");
     }
 
 
-    protected int calculateNetworkScore(String method){
+    protected int calculateNetworkScore(String method, KPMGraph copy){
         int degFree = -1;
         switch(method){
             case "mean":
@@ -188,7 +269,10 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
                 degFree = calculateNormalizedSumPval();
                 break;
             case "normDegSum":
-               degFree = calculateNodeDegreeNormSumPval();
+               degFree = calculateNodeDegreeNormSumPval(copy);
+                break;
+            case "meanLog":
+                degFree = calculateMeanLogPval();
                 break;
             default:
                 System.exit(1);
@@ -214,17 +298,30 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     }
 
 
-    private int calculateNodeDegreeNormSumPval(){
+    private int calculateNodeDegreeNormSumPval(KPMGraph copy){
         double sum = 0.0;
         double sumGeneral = 0.0;
         for(GeneNode n : this.getVertices()){
-            //double nrNode = k.getNeighborCount(n)*1.0;
-            double nrNode = 1.0;
+            double nrNode = copy.getNeighborCount(n)*1.0;
             sum+=n.getAveragePvalue().get("L1")*nrNode;
             sumGeneral+= n.getPvalue()*nrNode;
+
         }
         this.generalTeststat = sumGeneral;
         this.testStatistics = sum;
+
+        sum = 0.0;
+        sumGeneral = 0.0;
+        for(GeneNode n : this.lastNNodes){
+            double nrNode = copy.getNeighborCount(n)*1.0;
+            //double nrNode = n.getAverageNeighborExpression();
+            //double nrNode = 1.0;
+            sum+=n.getAveragePvalue().get("L1")*nrNode;
+            sumGeneral+= n.getPvalue()*nrNode;
+
+        }
+        this.generalTeststatLastN = sumGeneral;
+        this.testStatisticsLastN = sum;
         return this.getVertexCount();
     }
 
@@ -259,6 +356,38 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         }
         this.generalTeststat = sumGeneral;
         this.testStatistics = sum;
+
+        sum = 0.0;
+        sumGeneral = 0.0;
+        for(GeneNode n : this.lastNNodes){
+            sum+=n.getAveragePvalue().get("L1");
+            sumGeneral+= n.getPvalue();
+        }
+        this.generalTeststatLastN = sumGeneral;
+        this.testStatisticsLastN = sum;
+
+        return this.getVertexCount();
+    }
+
+    private int calculateMeanLogPval(){
+        double sum = 0.0;
+        double sumGeneral = 0.0;
+        for(GeneNode n : this.getVertices()){
+            sum+=Math.log10(n.getAveragePvalue().get("L1"));
+            sumGeneral+= Math.log10(n.getPvalue());
+        }
+        this.generalTeststat = sumGeneral/this.getVertexCount();
+        this.testStatistics = sum/this.getVertexCount();
+
+        sum = 0.0;
+        sumGeneral = 0.0;
+        for(GeneNode n : this.lastNNodes){
+            sum+=Math.log10(n.getAveragePvalue().get("L1"));
+            sumGeneral+= Math.log10(n.getPvalue());
+        }
+        this.generalTeststatLastN = sumGeneral/this.getVertexCount();
+        this.testStatisticsLastN = sum/this.getVertexCount();
+
         return this.getVertexCount();
     }
 
@@ -405,7 +534,8 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
     public void writeGraphToFile(String filename, String name, boolean general){
             try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename+".graph", true));
                  BufferedWriter stat = new BufferedWriter(new FileWriter(filename+".stat", true));
-                 BufferedWriter nodes = new BufferedWriter(new FileWriter(filename+".nodes", true))){
+                 BufferedWriter nodes = new BufferedWriter(new FileWriter(filename+".nodes", true));
+                 BufferedWriter evol = new BufferedWriter(new FileWriter(filename+".tracker", true))){
                 // file for test p value and teststatistics for each solution
                 if(!general) {
                     stat.write(name + "\t" + this.pval + "\t" + this.testStatistics +"\t"+this.getMaxDistanceFromThresh()+"\n");
@@ -425,6 +555,11 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
                 //write graph to file in sif format
                 for (GeneEdge e : this.getEdges()) {
                     bw.write(name +"\t"+getEndpoints(e).getFirst() + "\tpp\t" + getEndpoints(e).getSecond() + "\n");
+                }
+
+                // write score evolution file.
+                for(int i = 0; i<scoreTracker.size(); i++){
+                    evol.write(name +"\t"+ (i+1)+ "\t"+ scoreTracker.get(i) + "\n");
                 }
 
                 //bw.append("###");

@@ -72,21 +72,23 @@ public class Testcase {
         }
     }
 
-    public void createRandomDistribution(){
+    public void createRandomDistribution(int nrSamples){
+        double[] scores = new double[nrSamples];
         double[] s = new double[250];
-        for(int i = 0; i<250; i++){
+        for(int i = 20; i<21; i++){
             double stats = 0.0;
-            for(int j = 0; j<=25; j++){
-                RandomSubgraph rs = new RandomSubgraph(kpmGraph, i, false, "/home/anne/Masterarbeit/Testing/distribution/"+i+j, this.kpmSettings);
+            for(int j = 0; j<nrSamples; j++){
+                RandomSubgraph rs = new RandomSubgraph(kpmGraph, i, false, "/home/anne/Masterarbeit/distribution/mist/"+i+j, this.kpmSettings);
                 // TODO: dummy
-                rs.calculateNetworkScore("sum");
+                rs.calculateNetworkScore(this.kpmSettings.AGGREGATION_METHOD, kpmGraph);
+                scores[j]=rs.getGeneralTeststat();
                 stats+=rs.getGeneralTeststat();
             }
             stats = stats/25.0;
             s[i] = stats;
         }
-        try(BufferedWriter bw = new BufferedWriter(new FileWriter("/home/anne/Masterarbeit/Testing/distribution/random_scores.txt"))){
-            for(double s1: s){
+        try(BufferedWriter bw = new BufferedWriter(new FileWriter("/home/anne/Masterarbeit/distribution/random_scorew22s.txt"))){
+            for(double s1: scores){
                 bw.write(s1+"\n");
             }
         }

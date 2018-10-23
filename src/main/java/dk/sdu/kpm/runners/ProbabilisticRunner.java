@@ -9,6 +9,7 @@ import dk.sdu.kpm.algo.fdr.Testcase;
 import dk.sdu.kpm.charts.ChartInput;
 import dk.sdu.kpm.charts.IChart;
 import dk.sdu.kpm.charts.StandardCharts;
+import dk.sdu.kpm.graph.GeneEdge;
 import dk.sdu.kpm.graph.GeneNode;
 import dk.sdu.kpm.graph.KPMGraph;
 import dk.sdu.kpm.graph.Result;
@@ -21,6 +22,7 @@ import dk.sdu.kpm.taskmonitors.IKPMTaskMonitor;
 import dk.sdu.kpm.taskmonitors.KPMDummyTaskMonitor;
 import dk.sdu.kpm.validation.NodeOverlapCounter;
 import dk.sdu.kpm.validation.ValidationOverlapResult;
+
 import java.io.*;
 //import de.mpg.mpiinf.ag1.kpm.utils.*;
 import dk.sdu.kpm.perturbation.*;
@@ -78,103 +80,96 @@ public class ProbabilisticRunner implements Runnable {
     @Override
     public void run() {
         //Awesome stuff TODO
-        try{
-        // STEP 1: Generate the distribbution you will need to assess your result.
-       // DistributionGenerator dg = new DistributionGenerator(this.kpmSettings.MAIN_GRAPH, 1000, 1,100, true);
-        //dg.createBackgroundDistribution();
-        //dg.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out/dist/distribution.txt", dg.getDistribution());
-       // dg.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/out/dist/pdistribution.txt", dg.getPdist());
-            long now = System.currentTimeMillis();
+        try {
+            // Starting time
+            long start = System.currentTimeMillis();
+            this.taskMonitor.setStatusMessage(this.kpmSettings.toString());
 
             boolean general = true;
-            // String newpath =
+
+            // create output directory if it does not exist yet
             Files.createDirectories(Paths.get(outdir));
-            //kpmSettings.AGGREGATION_METHOD = "mean";
+
             //Testcase tc = new Testcase(this.kpmSettings.MAIN_GRAPH, this.kpmSettings, "/home/anne/Documents/Master/MA/pipeline_new/sample_networks/StringDB/");
             //tc.createTestcases();
-            //tc.createRandomDistribution();
+            //tc.createRandomDistribution(10000);
             //exit(0);
 
-            IPerturbation<KPMGraph> ps = PerturbationService.getPerturbation(IPerturbation.PerturbationTags.DegreeAwareNodeSwap, kpmSettings);
-                System.out.println("permute");
-            this.graph2 = ps.execute(kpmSettings.PERC_PERTURBATION, kpmSettings.MAIN_GRAPH, new KPMDummyTaskMonitor());
-            System.out.println("permute finsihed");
-            DistributionGenerator dg1 = new DistributionGenerator(this.graph2, kpmSettings.NR_SAMPLES_BACKROUND, 1,1000, false,
-                    kpmSettings);
-        dg1.createBackgroundDistribution(outdir+"/distribution_", general);
-        //dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/toydata/dist/distributionFall.txt", dg1.getDistribution());
-        //dg1.writeDistributionToFile("/home/anne/Documents/Master/MA/Testing/toydata/dist/pdistributionFall.txt", dg1.getPdist());
-        taskMonitor.setStatusMessage("Refreshing graph...");
-        kpmSettings.MAIN_GRAPH.refreshGraph(kpmSettings);
-        taskMonitor.setStatusMessage("Searching and extracting pathways...");
-        long start = System.currentTimeMillis();
+            // STEP 1: Generate the distribbution
+            IPerturbation<KPMGraph> ps = PerturbationService.getPerturbation(tag, kpmSettings);
+            this.taskMonitor.setStatusMessage("Permuting graph");
+            this.graph2 = ps.execute(kpmSettings.PERC_PERTURBATION, kpmSettings.MAIN_GRAPH, this.taskMonitor);
+            this.taskMonitor.setStatusMessage("Finished permuting graph");
+            this.taskMonitor.setStatusMessage("Started generating background score distribution");
+            DistributionGenerator dg1 = new DistributionGenerator(this.graph2, kpmSettings.NR_SAMPLES_BACKROUND, 400, kpmSettings);
+            dg1.createBackgroundDistribution(outdir + "/distribution_", general);
+            this.taskMonitor.setStatusMessage("Finished generating background score distribution");
 
-        try(BufferedWriter bw = new BufferedWriter(new FileWriter(outdir+"/thresholds.txt"))) {
-            for (int d = 0; d<dg1.getThresholds().length; d++) {
-                bw.write(d+"\t"+dg1.getThresholds()[d]+"\n");
-            }
+            taskMonitor.setStatusMessage("Refreshing graph...");
+            kpmSettings.MAIN_GRAPH.refreshGraph(kpmSettings);
+            taskMonitor.setStatusMessage("Searching and extracting pathways...");
 
-
-        }
-        catch(IOException e){
-            e.printStackTrace();
-        }
-            try(BufferedWriter bw = new BufferedWriter(new FileWriter(outdir+"/teststats.txt"))) {
-                for (int d = 0; d<dg1.getMeanTeststats().length; d++) {
-                    bw.write(d+"\t"+dg1.getMeanTeststats()[d]+"\n");
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(outdir + "/thresholds.txt"))) {
+                for (int d = 0; d < dg1.getThresholds().length; d++) {
+                    bw.write(d + "\t" + dg1.getThresholds()[d] + "\n");
                 }
 
 
-            }
-            catch(IOException e){
+            } catch (IOException e) {
                 e.printStackTrace();
             }
-        System.out.print(this.kpmSettings.toString());
-        List<Result> results = new AlgoComputations().run(kpmSettings.ALGO, kpmSettings.MAIN_GRAPH, taskMonitor, kpmSettings, dg1, general);
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(outdir + "/teststats.txt"))) {
+                for (int d = 0; d < dg1.getMeanTeststats().length; d++) {
+                    bw.write(d + "\t" + dg1.getMeanTeststats()[d] + "\n");
+                }
 
-        long end = System.currentTimeMillis();
-        kpmSettings.TOTAL_RUNNING_TIME = (end - start) / 1000;
-        int counter = 0;
 
-        for(Result res: results){
-            if(res instanceof RandomSubgraph && ((RandomSubgraph) res).getVertices().size()>1){
-                ((RandomSubgraph) res).writeGraphToFile(outdir+"/file", "graph"+counter, general);
-                counter++;
+            } catch (IOException e) {
+                e.printStackTrace();
             }
+
+            // STEP 2: Search pathways
+            List<Result> results = new AlgoComputations().run(kpmSettings.ALGO, kpmSettings.MAIN_GRAPH, taskMonitor, kpmSettings, dg1, general);
+
+            long end = System.currentTimeMillis();
+            kpmSettings.TOTAL_RUNNING_TIME = (end - start) / 1000;
+
+
+            // STEP 3: Write output to files
+            int counter = 0;
+            for (Result res : results) {
+                if (res instanceof RandomSubgraph && ((RandomSubgraph) res).getVertices().size() > 1) {
+                    ((RandomSubgraph) res).writeGraphToFile(outdir + "/file", "graph" + counter, general);
+                    counter++;
+                }
+            }
+
+            // Write an R markdown report. May fail.
+            //String command = "Rscript " + "~/Masterarbeit/R/reports/create_report_greedy.R" + "" +" -f " + outdir+ " -g ~/Masterarbeit/data/toydata/expression_type.tsv";
+            //Process process = Runtime.getRuntime().exec(command);
+
+
+            StandardResultSet resultSet = null;
+            this.listener.runFinished(resultSet);
+
+        } catch (Exception e) {
+            // Ensure we catch all errors
+            KpmLogger.log(Level.SEVERE, e);
+            cancel();
         }
-        // Write an R markdown report. May fail.
-            String command = "Rscript "+ "~/Masterarbeit/R/reports/create_report_greedy.R" +"" +
-                    " -f "+outdir
-                    + " -g ~/Masterarbeit/data/toydata/expression_type.tsv";
-        System.out.println(command);
-            Process process = Runtime.getRuntime().exec(command);
-
-
-        StandardResultSet resultSet = null;
-
-       /* if (this.copyKPMSettings) {
-            resultSet = new StandardResultSet(new KPMSettings(kpmSettings), getResults(), getStandardCharts(), getOverlapResultsOrNull());
-        } else {
-            resultSet = new StandardResultSet(kpmSettings, getResults(), getStandardCharts(), getOverlapResultsOrNull());
-        }
-*/
-        this.listener.runFinished(resultSet);
-
-    } catch (Exception e) {
-        // Ensure we catch all errors
-        KpmLogger.log(Level.SEVERE, e);
-        cancel();
-    }
 
 
     }
-    public void getResults(){
+
+    public void getResults() {
 
     }
-    public void getStandardCharts(){
+
+    public void getStandardCharts() {
 
     }
-    public void getOverlapResultsOrNull(){
+
+    public void getOverlapResultsOrNull() {
 
     }
 

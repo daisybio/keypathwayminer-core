@@ -367,6 +367,15 @@ public class KPMGraph extends SparseGraph<GeneNode, GeneEdge> implements Seriali
             }
         }
 
+        // Calculate average neighbour expression for on dataset
+        // TODO: clean up for when using multiple datasets and so on.
+        for (GeneNode n: this.getVertices()){
+            double sum = 0.0;
+            for (GeneNode nn: this.getNeighbors(n)){
+                sum+=nn.getPvalue();
+            }
+            n.setAverageNeighborExpression(sum/this.getNeighborCount(n));
+        }
 
     }
 
