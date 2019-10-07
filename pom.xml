@@ -4,8 +4,8 @@
         <groupId>exbio.tum.de</groupId>
         <artifactId>KPMdev</artifactId>
         <version>1.0</version>
-        <relativePath>../parent</relativePath>
     </parent>
+
 	<properties>
         <org.osgi.framework.system.packages.extra>sun.misc</org.osgi.framework.system.packages.extra>
         <felix-sys-prop.org.osgi.framework.system.packages.extra>sun.misc</felix-sys-prop.org.osgi.framework.system.packages.extra>
