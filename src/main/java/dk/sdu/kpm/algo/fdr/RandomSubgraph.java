@@ -154,6 +154,7 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         this.scoreTracker = scoreTracker;
     }
 
+    boolean writeBackground=false;
 
     /*
     * this constructor can be used to generate the random networks for the background distribution
@@ -162,20 +163,24 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         super();
         this.kpmSettings = kpmSettings;
         this.id = System.currentTimeMillis()+"graph";
+        this.n= kpmSettings.SLIDING_WINDOW_SIZE;
         generateRandomSizeN(kpmGraph, size, includeBackgroundNodes, filename);
     }
     /*
     * This constructor will be used by the Algorithm to generate candidate networks
      */
 
-    public RandomSubgraph(GeneNode node){
+    public RandomSubgraph(GeneNode node, KPMSettings kpmSettings){
     //super();
+        this.kpmSettings = kpmSettings;
+        this.n= kpmSettings.SLIDING_WINDOW_SIZE;
         this.id = System.currentTimeMillis()+"graph";
     this.addVertex(node);
     }
 
-    public RandomSubgraph(){
-
+    public RandomSubgraph(KPMSettings kpmSettings){
+        this.kpmSettings = kpmSettings;
+        this.n= kpmSettings.SLIDING_WINDOW_SIZE;
     }
 
     /*
@@ -244,7 +249,9 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
             }
         }
         calculateNetworkScore(kpmSettings.AGGREGATION_METHOD, kpmGraph);
-        writeToFile(filename+"pvalsSamplewise.txt", filename+"nodeDist.txt", filename+"pvalsGeneral.txt");
+        if(writeBackground) {
+            writeToFile(filename + "pvalsSamplewise.txt", filename + "nodeDist.txt", filename + "pvalsGeneral.txt");
+        }
     }
 
 
@@ -373,8 +380,8 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         double sum = 0.0;
         double sumGeneral = 0.0;
         for(GeneNode n : this.getVertices()){
-            sum+=Math.log10(n.getAveragePvalue().get("L1"));
-            sumGeneral+= Math.log10(n.getPvalue());
+            sum+=Math.log10(n.getAveragePvalue().get("L1"))*-1;
+            sumGeneral+= Math.log10(n.getPvalue())*-1;
         }
         this.generalTeststat = sumGeneral/this.getVertexCount();
         this.testStatistics = sum/this.getVertexCount();
@@ -382,8 +389,8 @@ public class RandomSubgraph extends SparseGraph<GeneNode, GeneEdge> implements S
         sum = 0.0;
         sumGeneral = 0.0;
         for(GeneNode n : this.lastNNodes){
-            sum+=Math.log10(n.getAveragePvalue().get("L1"));
-            sumGeneral+= Math.log10(n.getPvalue());
+            sum+=Math.log10(n.getAveragePvalue().get("L1"))*-1;
+            sumGeneral+= Math.log10(n.getPvalue())*-1;
         }
         this.generalTeststatLastN = sumGeneral/this.getVertexCount();
         this.testStatisticsLastN = sum/this.getVertexCount();
