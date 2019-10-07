@@ -37,6 +37,7 @@ import java.util.List;
 
 import static dk.sdu.kpm.perturbation.IPerturbation.PerturbationTags.EdgeRewire;
 import static java.lang.System.exit;
+import static java.lang.System.lineSeparator;
 
 public class ProbabilisticRunner implements Runnable {
 
@@ -90,10 +91,12 @@ public class ProbabilisticRunner implements Runnable {
             // create output directory if it does not exist yet
             Files.createDirectories(Paths.get(outdir));
 
-            //Testcase tc = new Testcase(this.kpmSettings.MAIN_GRAPH, this.kpmSettings, "/home/anne/Documents/Master/MA/pipeline_new/sample_networks/StringDB/");
-            //tc.createTestcases();
-            //tc.createRandomDistribution(10000);
-            //exit(0);
+            if(kpmSettings.GENERATE_SAMPLES) {
+                Testcase tc = new Testcase(this.kpmSettings.MAIN_GRAPH, this.kpmSettings, outdir);
+                tc.createTestcases2();
+                //tc.createRandomDistribution(10000);
+                exit(0);
+            }
 
             // STEP 1: Generate the distribbution
             IPerturbation<KPMGraph> ps = PerturbationService.getPerturbation(tag, kpmSettings);
@@ -101,7 +104,7 @@ public class ProbabilisticRunner implements Runnable {
             this.graph2 = ps.execute(kpmSettings.PERC_PERTURBATION, kpmSettings.MAIN_GRAPH, this.taskMonitor);
             this.taskMonitor.setStatusMessage("Finished permuting graph");
             this.taskMonitor.setStatusMessage("Started generating background score distribution");
-            DistributionGenerator dg1 = new DistributionGenerator(this.graph2, kpmSettings.NR_SAMPLES_BACKROUND, 400, kpmSettings);
+            DistributionGenerator dg1 = new DistributionGenerator(this.graph2, kpmSettings.NR_SAMPLES_BACKROUND, kpmSettings.MAX_NETWORK_SIZE, kpmSettings);
             dg1.createBackgroundDistribution(outdir + "/distribution_", general);
             this.taskMonitor.setStatusMessage("Finished generating background score distribution");
 

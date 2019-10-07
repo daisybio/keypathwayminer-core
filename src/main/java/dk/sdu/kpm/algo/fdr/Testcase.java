@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Random;
 
 public class Testcase {
@@ -32,10 +33,11 @@ public class Testcase {
         ArrayList<RandomSubgraph> al = new ArrayList<RandomSubgraph>();
         // Make sure that no network size is drawn twice.
         ArrayList<Integer> visited = new ArrayList<Integer>();
+        //int[] samplesize={10,15,20, 25,30,35,40, 45,50,60,70,80,90};
         for(int i =0; i<20; i++) {
             int j = r.nextInt(100);
-            if(visited.contains(j)){
-                i--;
+            //j=samplesize[i];
+            if(visited.contains(j) || j<=5){
                 continue;
             }
             visited.add(j);
@@ -49,7 +51,12 @@ public class Testcase {
             RandomSubgraph rs = new RandomSubgraph(kpmGraph, j, false, directory+j , this.kpmSettings);
             for(RandomSubgraph rr: al){
                 boolean cond = false;
-                for(GeneNode n: rr.getVertices()) {
+                ArrayList<GeneNode> vert = new ArrayList<GeneNode>();
+                vert.addAll(rr.getVertices());
+                //for(GeneNode n: rr.getVertices()){
+                  //  vert.addAll(kpmGraph.getNeighbors(n));
+                //}
+                for(GeneNode n: vert) {
                     if (rs.getVertices().contains(n)) {
                         i--;
                         cond = true;
@@ -62,15 +69,35 @@ public class Testcase {
                 }
             }
             if(overlap){
-                continue;
+                //continue;
             }
             else {
                 al.add(rs);
                 rs.writeGraphToFile(directory +
-                        File.separator + j, j + "", false);
+                        File.separator + j, j + ""+"_"+i, false);
             }
         }
     }
+    public void createTestcases2(){
+        Random r = kpmSettings.R;
+        for(int i =0; i<20; i++) {
+            int j = r.nextInt(100);
+            while (j<5){
+                j=r.nextInt(100);
+            }
+            try {
+                Files.createDirectories(Paths.get(directory));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            RandomSubgraph rs = new RandomSubgraph(kpmGraph, j, false, directory+j , this.kpmSettings);
+            rs.writeGraphToFile(directory +
+                    File.separator + j+"_"+i, j + "", false);
+            //}
+        }
+    }
+
+
 
     public void createRandomDistribution(int nrSamples){
         double[] scores = new double[nrSamples];

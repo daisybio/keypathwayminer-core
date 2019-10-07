@@ -4,6 +4,7 @@ import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.graph.KPMGraph;
 import dk.sdu.kpm.graph.Result;
 import dk.sdu.kpm.taskmonitors.KPMDummyTaskMonitor;
+import dk.sdu.kpm.utils.Comparator;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.interpolation.*;
 import org.apache.commons.math3.stat.Frequency;
@@ -38,6 +39,7 @@ public class DistributionGenerator {
     protected double[] meanTeststats;
     Integer[] sizes;
     KPMSettings kpmSettings;
+    boolean printBackground;
 
     public DistributionGenerator(KPMGraph kpmGraph, int nrSamples, int sizeOfLargest,
                                  KPMSettings kpmSettings) {
@@ -49,6 +51,7 @@ public class DistributionGenerator {
         this.pdist = new HashMap<Integer, double[]>();
         this.kpmSettings = kpmSettings;
         this.fdr = kpmSettings.FDR_CUTOFF;
+        this.printBackground=kpmSettings.PRINT_BACKGROUND;
     }
 
     public double[] getMeanTeststats() {
@@ -80,7 +83,9 @@ public class DistributionGenerator {
             int i = 0;
             for (Result rs : res) {
                 RandomSubgraph r = (RandomSubgraph) rs;
-                ((RandomSubgraph) rs).writeToFile(filename + "pvalsSamplewise.txt", filename + "nodeDist.txt", filename + "pvalsGeneral.txt");
+                if(this.printBackground) {
+                    ((RandomSubgraph) rs).writeToFile(filename + "pvalsSamplewise.txt", filename + "nodeDist.txt", filename + "pvalsGeneral.txt");
+                }
                 distribution.get(j)[i] = r.getGeneralTeststat();
                 pdist.get(j)[i] = r.getGeneralPval();
                 i++;
@@ -174,7 +179,13 @@ public class DistributionGenerator {
         meanTeststats = new double[this.distribution.size()];
         double[] thresholds = new double[this.pdist.size()];
         // index = % of all random networks
-        int index = (int) Math.floor(this.fdr * nrSamples);
+        int index  =0;
+        if(kpmSettings.COMPARATOR.equals(Comparator.GT)){
+            index = (int) Math.ceil((1-this.fdr) * nrSamples);
+        }
+        else {
+            index = (int) Math.floor(this.fdr * nrSamples);
+        }
         int counter = 0;
         Integer[] indices = this.pdist.keySet().toArray(new Integer[this.pdist.size()]);
         Arrays.sort(indices);

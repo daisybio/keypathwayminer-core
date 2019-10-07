@@ -132,6 +132,9 @@ public class FDRGreedy implements Serializable {
             if(!isSearch && counter>=nrSamples){
                 break;
             }
+            if(isSearch && counter>=kpmSettings.NUM_SOLUTIONS){
+                break;
+            }
 
             // for computational feasibility seeds need values need to be better than a certain
             // threshold, say top 20% (is user defined)
@@ -209,7 +212,7 @@ public class FDRGreedy implements Serializable {
     }
 
     private Result fromStartingNode(GeneNode startingNode) {
-        RandomSubgraph sd = new RandomSubgraph(startingNode);
+        RandomSubgraph sd = new RandomSubgraph(startingNode, this.kpmSettings);
         //System.out.println(startingNode);
         sd.add2lastNNodes(startingNode);
         sd = extendNetwork(sd, false);
@@ -299,7 +302,7 @@ public class FDRGreedy implements Serializable {
                 }
             }
         }
-        RandomSubgraph reconciledResult = new RandomSubgraph();
+        RandomSubgraph reconciledResult = new RandomSubgraph(kpmSettings);
         for (GeneEdge e : edgeCount.keySet()) {
             if (edgeCount.get(e) * 1.0 / seedNets.size() * 1.0 >= threshold) {
             //if (edgeCount.get(e) > 1) {
@@ -332,7 +335,7 @@ public class FDRGreedy implements Serializable {
                 }
             }
         }
-        RandomSubgraph reconciledResult = new RandomSubgraph();
+        RandomSubgraph reconciledResult = new RandomSubgraph(kpmSettings);
         for (GeneNode node : nodeCount.keySet()) {
             if (nodeCount.get(node) * 1.0 / seedNets.size() * 1.0 >= threshold) {
                 //if (edgeCount.get(e) > 1) {
@@ -512,8 +515,8 @@ public class FDRGreedy implements Serializable {
             return new Wrapper(0, minint);
         }
         else{
-            if (Math.abs(sd.getGeneralTeststat()-dg.getMeanTS(sd.getVertexCount()))>minint) {
-                minint = Math.abs(sd.getGeneralTeststat()-dg.getMeanTS(sd.getVertexCount()));
+            if (Math.abs(sd.getGeneralTeststat()-dg.getMeanTS(sd.getVertexCount()))/sd.getVertexCount()>minint) {
+                minint = (Math.abs(sd.getGeneralTeststat()-dg.getMeanTS(sd.getVertexCount())))/sd.getVertexCount();
                 return new Wrapper(sd.getVertexCount(), minint);
             }
             else{
@@ -530,7 +533,7 @@ public class FDRGreedy implements Serializable {
     private RandomSubgraph returnBest(RandomSubgraph currentBest, Wrapper w, ArrayList<GeneNode> order){
         RandomSubgraph fin = null;
         if(kpmSettings.TERMINATION_CRITERION.equals("maximum_distance")) {
-            fin = new RandomSubgraph();
+            fin = new RandomSubgraph(kpmSettings);
             for (int i = 0; i < w.minInd; i++) {
                 GeneNode g = order.get(i);
                 fin.addVertex(g);
@@ -560,7 +563,8 @@ public class FDRGreedy implements Serializable {
     private boolean checkFitness(GeneNode n, boolean general) {
         double sig = kpmSettings.SIGNIFICANCE_LEVEL;
         if(!isSearch){
-            sig = 1.0;
+            return true;
+
         }
         boolean fit = false;
         if (!general) {
@@ -637,10 +641,10 @@ public class FDRGreedy implements Serializable {
             }
         }else{
             //int size = (int) Math.floor(sg.getVertexCount()*0.67);
-            int size=sg.getN();
+            int size=kpmSettings.SLIDING_WINDOW_SIZE;
             if (!general) {
 
-                // TODO: adapt mean
+                // TODO: make a real sliding window
                 // refresh P value of subnetwork
 
                 // subnetwork pvalue must be smaller than threshold

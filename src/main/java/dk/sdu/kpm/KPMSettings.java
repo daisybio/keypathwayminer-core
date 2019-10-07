@@ -311,10 +311,13 @@ public class KPMSettings {
 
     public volatile  String TERMINATION_CRITERION = "largest";
     public boolean SLIDING_WINDOW = false;
+    public int SLIDING_WINDOW_SIZE=20;
 
     public String BACKGROUND = "greedy";
 
+    public boolean PRINT_BACKGROUND=false;
 
+    public boolean GENERATE_SAMPLES=false;
 
     public boolean containsGoldStandardNodes(){
         return this.VALIDATION_GOLDSTANDARD_NODES != null && this.VALIDATION_GOLDSTANDARD_NODES.size() > 0;
