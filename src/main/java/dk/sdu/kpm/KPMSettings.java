@@ -552,6 +552,8 @@ public class KPMSettings {
         str += "TERMINATION_CRITERION =" +   TERMINATION_CRITERION +lineSep;
         str += "BACKGROUND =" +   BACKGROUND +lineSep;
         str += "SLIDING_WINDOW =" +   SLIDING_WINDOW +lineSep;
+        str += "SLIDING_WINDOW_SIZE =" +   SLIDING_WINDOW_SIZE +lineSep;
+        str += "GENERATE_SAMPLES =" +   GENERATE_SAMPLES +lineSep;
 
         
         
