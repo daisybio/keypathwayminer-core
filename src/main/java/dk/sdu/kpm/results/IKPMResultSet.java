@@ -5,6 +5,7 @@ import java.util.Map;
 
 import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.charts.IChart;
+import dk.sdu.kpm.runners.BatchResult;
 import dk.sdu.kpm.validation.ValidationOverlapResult;
 
 public interface IKPMResultSet {
@@ -27,7 +28,7 @@ public interface IKPMResultSet {
 	 * Returns the list of results from a run which has not been perturbed.
 	 * @return
 	 */
-	List<IKPMResultItem> getResults();
+	List<BatchResult> getResults();
 
 
 	/**

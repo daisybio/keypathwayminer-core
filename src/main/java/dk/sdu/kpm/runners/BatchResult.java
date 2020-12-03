@@ -1,6 +1,8 @@
 package dk.sdu.kpm.runners;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -10,13 +12,15 @@ import dk.sdu.kpm.results.IKPMResultItem;
 /**
  * Class used to hold information regarding a kpm result.
  */
-public class BatchResult implements IKPMResultItem, Serializable{
-	
-	private int k;
-	
-	private int l;
-	
-	private Map<String, GeneNode> unionNodeSet;
+public class BatchResult implements IKPMResultItem, Serializable {
+
+    private int k;
+
+    private int l;
+
+    private LinkedHashMap<String, Integer> lMap = new LinkedHashMap<>();
+
+    private Map<String, GeneNode> unionNodeSet;
 
     private List<Map<String, GeneNode>> allComputedSets;
 
@@ -26,33 +30,33 @@ public class BatchResult implements IKPMResultItem, Serializable{
 
     private Object[][] resultsInfoTable;
 
-    public BatchResult(int k, int l, Map<String, GeneNode> unionNodeSet, List<Map<String, GeneNode>> allComputedSets, Map<String, Integer> unionNodeSetCounts, Object[][] resultsInfoTable){
-		this.k = k;
-		this.l = l;
-		this.unionNodeSet = unionNodeSet;
+    public BatchResult(int k, int l, Map<String, GeneNode> unionNodeSet, List<Map<String, GeneNode>> allComputedSets, Map<String, Integer> unionNodeSetCounts, Object[][] resultsInfoTable) {
+        this.k = k;
+        this.l = l;
+        this.unionNodeSet = unionNodeSet;
         this.allComputedSets = allComputedSets;
         this.unionNodeSetCounts = unionNodeSetCounts;
         this.resultsInfoTable = resultsInfoTable;
-	}
+    }
 
-    public BatchResult(Map<String, GeneNode> unionNodeSet, List<Map<String, GeneNode>> allComputedSets, Map<String, Integer> unionNodeSetCounts, Object[][] resultsInfoTable){
-        this(0,0,unionNodeSet,allComputedSets,unionNodeSetCounts, resultsInfoTable);
+    public BatchResult(Map<String, GeneNode> unionNodeSet, List<Map<String, GeneNode>> allComputedSets, Map<String, Integer> unionNodeSetCounts, Object[][] resultsInfoTable) {
+        this(0, 0, unionNodeSet, allComputedSets, unionNodeSetCounts, resultsInfoTable);
     }
 
 
-	@Override
-	public int getK() {
-		return this.k;
-	}
+    @Override
+    public int getK() {
+        return this.k;
+    }
 
-    public void setK(int k){
+    public void setK(int k) {
         this.k = k;
     }
 
-	@Override
-	public int getL() {
-		return this.l;
-	}
+    @Override
+    public int getL() {
+        return this.l;
+    }
 
     @Override
     public Object[][] getResultsInfoTable() {
@@ -64,14 +68,22 @@ public class BatchResult implements IKPMResultItem, Serializable{
         return cols;
     }
 
-    public void setL(int l){
+    public void setL(int l) {
         this.l = l;
     }
 
-	@Override
-	public Map<String, GeneNode> getUnionNodeSet() {
-		return this.unionNodeSet;
-	}
+    public void insertTolMap(String id, int caseExceptions) {
+        this.lMap.put(id, caseExceptions);
+    }
+
+    public LinkedHashMap<String, Integer> getLmap() {
+        return lMap;
+    }
+
+    @Override
+    public Map<String, GeneNode> getUnionNodeSet() {
+        return this.unionNodeSet;
+    }
 
     @Override
     public Map<String, Integer> getUnionNodeSetCounts() {

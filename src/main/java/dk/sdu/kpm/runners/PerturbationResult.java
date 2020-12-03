@@ -9,17 +9,17 @@ import dk.sdu.kpm.validation.ValidationOverlapResult;
 public class PerturbationResult implements Serializable {
 	public int PercentagePerturbed;
 	public int GraphNr;
-	public List<IKPMResultItem> Results;
+	public List<BatchResult> Results;
 	public List<ValidationOverlapResult> ValidationOverlapResults;
 	
-	public PerturbationResult(int percentagePerturbed, int graphNr, List<IKPMResultItem> results){
+	public PerturbationResult(int percentagePerturbed, int graphNr, List<BatchResult> results){
 		this.PercentagePerturbed = percentagePerturbed;
 		this.GraphNr = graphNr;
 		this.Results = results;
 		this.ValidationOverlapResults = null;
 	}
 
-	public PerturbationResult(int percentagePerturbed, int graphNr, List<IKPMResultItem> results, List<ValidationOverlapResult> validationOverlapResults){
+	public PerturbationResult(int percentagePerturbed, int graphNr, List<BatchResult> results, List<ValidationOverlapResult> validationOverlapResults){
 		this(percentagePerturbed, graphNr, results);
 		this.ValidationOverlapResults = validationOverlapResults;
 	}

@@ -34,7 +34,7 @@ public class BatchRunner implements Runnable {
     private volatile KPMSettings kpmSettings;
 
     public BatchRunner(String runId, IKPMTaskMonitor taskMonitor,
-            IKPMRunListener listener, KPMSettings settings) {
+                       IKPMRunListener listener, KPMSettings settings) {
         this.runId = runId;
         this.taskMonitor = taskMonitor;
         this.listener = listener;
@@ -140,10 +140,10 @@ public class BatchRunner implements Runnable {
 
                 if (kpmSettings.CALCULATE_ONLY_SAME_L_VALUES && params.size() > 0) {
                     Map<String, List<Integer>> lRanges = getRangeLPer();
-                    for (String lid: lRanges.keySet()) {
+                    for (String lid : lRanges.keySet()) {
                         kpmSettings.CASE_EXCEPTIONS_MAP.put(lid, lRanges.get(lid).get(0));
                     }
-                    
+
                     PercentageParameters param = new PercentageParameters(params.get(0), percentages.get(0));
                     kpmSettings.STATS_MAP_PER.put(param, rs);
                 } else {
@@ -160,8 +160,8 @@ public class BatchRunner implements Runnable {
     private void runIndividualL() {
         List<Integer> kList = new ArrayList<Integer>();
         kpmSettings.INDEX_L_MAP = new HashMap<Integer, String>();
- //       kpmSettings.VARYING_L_ID = new ArrayList<String>(2);
- //       kpmSettings.VARYING_L_ID_IN_PERCENTAGE = new HashMap<String, Boolean>(2);
+        //       kpmSettings.VARYING_L_ID = new ArrayList<String>(2);
+        //       kpmSettings.VARYING_L_ID_IN_PERCENTAGE = new HashMap<String, Boolean>(2);
         if (kpmSettings.USE_INES) {
             if (kpmSettings.MIN_K == kpmSettings.MAX_K) {
                 kList.add(kpmSettings.MIN_K);
@@ -626,7 +626,7 @@ public class BatchRunner implements Runnable {
 
             // Preparing the results:
             StandardResultSet resultSet;
-            
+
             if (this.copyKPMSettings) {
                 resultSet = new StandardResultSet(new KPMSettings(kpmSettings), getResults(), getStandardCharts(), getOverlapResultsOrNull());
             } else {
@@ -650,7 +650,7 @@ public class BatchRunner implements Runnable {
      */
     private List<ValidationOverlapResult> getOverlapResultsOrNull() {
         List<ValidationOverlapResult> res = null;
-        
+
         if (kpmSettings.VALIDATION_GOLDSTANDARD_NODES != null && kpmSettings.VALIDATION_GOLDSTANDARD_NODES.size() > 0) {
             this.taskMonitor.setStatusMessage("Calculating overlap results.");
             // Clear old results
@@ -659,7 +659,7 @@ public class BatchRunner implements Runnable {
 
             this.taskMonitor.setStatusMessage("Finishing overlap results.");
         }
-        
+
         return res;
     }
 
@@ -702,7 +702,7 @@ public class BatchRunner implements Runnable {
                 chartInputList.add(new ChartInput(k, l, rs.getResults()));
             }
         } else if (kpmSettings.VARYING_L_ID.size() == 2) {
-            
+
             List<String> identifiers = kpmSettings.externalToInternalIDManager.getInternalIdentifiers();
             for (List<Integer> params : kpmSettings.STATS_MAP.keySet()) {
                 RunStats rs = kpmSettings.STATS_MAP.get(params);
@@ -809,7 +809,7 @@ public class BatchRunner implements Runnable {
             }
             if (!allSameL) {
                 IChart lnChart = StandardCharts.L_vs_Nodes(chartInputList, L_inPercentage, "K", true);
-                    
+
                 if (!kpmSettings.USE_INES) {
                     lnChart = StandardCharts.L_vs_Nodes(chartInputList, L_inPercentage, "L", false);
                 }
@@ -836,14 +836,14 @@ public class BatchRunner implements Runnable {
             if (kpmSettings.VARYING_L_ID_IN_PERCENTAGE.containsKey(varL1)) {
                 var1InPer = kpmSettings.VARYING_L_ID_IN_PERCENTAGE.get(varL1);
             } else {
-    //            System.out.println(varL1 + " NOT FOUND IN PER");
+                //            System.out.println(varL1 + " NOT FOUND IN PER");
             }
 
             boolean var2InPer = false;
             if (kpmSettings.VARYING_L_ID_IN_PERCENTAGE.containsKey(varL2)) {
                 var2InPer = kpmSettings.VARYING_L_ID_IN_PERCENTAGE.get(varL2);
             } else {
-    //            System.out.println(varL2 + " NOT FOUND IN PER");
+                //            System.out.println(varL2 + " NOT FOUND IN PER");
             }
             boolean allSameL1 = true;
             first = true;
@@ -952,9 +952,9 @@ public class BatchRunner implements Runnable {
         return standardCharts;
     }
 
-    private List<IKPMResultItem> getResults() {
+    private List<BatchResult> getResults() {
         this.taskMonitor.setStatusMessage("Fetching results.");
-        List<IKPMResultItem> results = new ArrayList<IKPMResultItem>();
+        List<BatchResult> results = new ArrayList<BatchResult>();
         try {
             if ((kpmSettings.STATS_MAP == null || kpmSettings.STATS_MAP.isEmpty()) &&
                     (kpmSettings.STATS_MAP_PER == null || kpmSettings.STATS_MAP_PER.isEmpty())) {
@@ -977,54 +977,29 @@ public class BatchRunner implements Runnable {
                 return results;
             }
 
-            List<String> identifiers = kpmSettings.externalToInternalIDManager.getInternalIdentifiers();
             for (List<Integer> params : kpmSettings.STATS_MAP.keySet()) {
                 RunStats rs = kpmSettings.STATS_MAP.get(params);
                 BatchResult br = GetResultFromRunStats(rs);
-                int k = params.get(0);
-                int l1 = params.get(1);
-                int l2 = 0;
-                br.setK(k);
-                br.setL(l1);
-                if (kpmSettings.VARYING_L_ID.size() == 1) {
-                    l1 = params.get(identifiers.indexOf(kpmSettings.VARYING_L_ID.get(0)) + 1);
-                    br.setK(k);
-                    br.setL(l1);
-                } else if (kpmSettings.VARYING_L_ID.size() == 2) {
-                    l1 = params.get(identifiers.indexOf(kpmSettings.VARYING_L_ID.get(1)) + 1);
-                    l2 = params.get(identifiers.indexOf(kpmSettings.VARYING_L_ID.get(0)) + 1);
-                    br.setK(l1);
-                    br.setL(l2);
-                }
-  
-//                if (!identifiers.contains(kpmSettings.VARYING_L_ID)) {
-//                    break;
-//                }
-//
-//                int l = params.get(identifiers.indexOf(kpmSettings.VARYING_L_ID) + 1);
 
+                // K is always on the first place of the
+                br.setK(params.get(0));
+
+                /*
+                    We are using the internal identifiers list since this list
+                    preserves the order in which the parameters were added.
+                    This means that the internal ids give tells us the real
+                     order in which the arguments were added in the command line.
+                 */
+
+                List<String> identifiers = kpmSettings.externalToInternalIDManager.getInternalIdentifiers();
+
+                for (String id : identifiers) {
+                    String userId = kpmSettings.externalToInternalIDManager.getExternalIdentifier(id);
+                    br.insertTolMap(userId, params.get(identifiers.indexOf(id) + 1));
+                }
                 results.add(br);
             }
 
-            // If this case is true, we either do not have a varying L, or we are not using INES
-//            if (!identifiers.contains(kpmSettings.VARYING_L_ID) && results.isEmpty()) {
-//                System.out.println("5. getResults() BATCH RUNNER");
-//                for (List<Integer> params : kpmSettings.STATS_MAP.keySet()) {
-//                    System.out.println("5.1 loop getResults() BATCH RUNNER");
-//                    RunStats rs = kpmSettings.STATS_MAP.get(params);
-//
-//                    BatchResult br = GetResultFromRunStats(rs);
-//                    int k = params.get(0);
-//                    br.setK(k);
-//
-//                    if (params.size() > 1) {
-//                        int l = params.get(1);
-//                        br.setL(l);
-//                    }
-//                    // We just add all the results.
-//                    results.add(br);
-//                }
-//            }
         } catch (Exception e) {
             KpmLogger.log(Level.SEVERE, e);
         }
