@@ -37,15 +37,19 @@ public class GeneCluster implements Comparable<GeneCluster>, Serializable {
 	private int hashCode = -1;
 	private boolean finalizedHashCode = false;
 
-    private boolean MULTIPLICATIVE_TRADEOFF = false;
-    private double ALPHA = 0;
-    private double BETA = 0;
+    private final boolean MULTIPLICATIVE_TRADEOFF;
+    private final double ALPHA;
+    private final double BETA;
 
 	public static void resetExcpMap(){
 		excNodeToExcCluster = new HashMap<GeneNode, GeneCluster>();
 	}
 
-	private GeneCluster() {
+	private GeneCluster(KPMSettings settings) {
+		this.MULTIPLICATIVE_TRADEOFF = settings.MULTIPLICATIVE_TRADEOFF;
+		this.ALPHA = settings.ALPHA;
+		this.BETA = settings.BETA;
+		this.pheromone = settings.N / ((double) 2);
 	}
 
 	/**
@@ -62,13 +66,7 @@ public class GeneCluster implements Comparable<GeneCluster>, Serializable {
 	public static GeneCluster fromValidNode(GeneNode node, KPMGraph g, KPMSettings settings) {
 		if (!node.isValid())
 			throw new IllegalArgumentException("Given node has to be valid.");
-		GeneCluster newCluster = new GeneCluster();
-
-        newCluster.MULTIPLICATIVE_TRADEOFF = settings.MULTIPLICATIVE_TRADEOFF;
-        newCluster.ALPHA = settings.ALPHA;
-        newCluster.BETA = settings.BETA;
-
-		newCluster.pheromone = settings.N / ((double) 2);
+		GeneCluster newCluster = new GeneCluster(settings);
 		newCluster.setValid(true);
 		newCluster.addNode(node);
 		GeneNode neighbor = newCluster.nextValidNeighbor(g);
@@ -97,14 +95,14 @@ public class GeneCluster implements Comparable<GeneCluster>, Serializable {
 	 * @param node
 	 * @return
 	 */
-	public static GeneCluster fromExceptionNode(GeneNode node) {
+	public static GeneCluster fromExceptionNode(GeneNode node, KPMSettings settings) {
 		if (node.isValid())
 			throw new IllegalArgumentException("Node has to be exceptional.");
 
 		GeneCluster excCluster = excNodeToExcCluster.get(node);
 
 		if (excCluster == null) {
-			excCluster = new GeneCluster();
+			excCluster = new GeneCluster(settings);
 			excCluster.addNode(node);
 			excCluster.setValid(false);
 			excNodeToExcCluster.put(node, excCluster);

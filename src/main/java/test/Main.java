@@ -1,16 +1,24 @@
 package test;
 
+import dk.sdu.kpm.Algo;
+import dk.sdu.kpm.KPMSettings;
 import dk.sdu.kpm.charts.*;
+import dk.sdu.kpm.graph.KPMGraph;
+import dk.sdu.kpm.results.IKPMResultItem;
+import dk.sdu.kpm.results.IKPMResultSet;
+import dk.sdu.kpm.runners.BatchRunner;
+import dk.sdu.kpm.taskmonitors.KPMDummyTaskMonitor;
+import dk.sdu.kpm.results.IKPMRunListener;
 
 import javax.swing.*;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class Main {
-	public static void main(String[] args) {
+    private static final String pathToResources = "KPM-5/resources";
 
+	public static void main(String[] args) {
         double original = 38;
         int L = 2;
 
@@ -18,6 +26,37 @@ public class Main {
         System.out.println("(int) Math.floor((original / L) * (double)100) = " + (int) Math.floor((original / L)));
         System.out.println("(int) Math.floor(((double)100 / L) * original) = " + (int) Math.floor(((double)100 / L) * original));
 
+        final KPMSettings kpmSettings = new KPMSettings();
+        kpmSettings.ALGO = Algo.LCG;
+        kpmSettings.MATRIX_FILES_MAP.put("L1", pathToResources +
+                "/datasets/indicator-matrices/huntington-gene-expression-down-p005.txt");
+        kpmSettings.CASE_EXCEPTIONS_MAP.put("L1", 15);
+        kpmSettings.GENE_EXCEPTIONS = 5;
+        kpmSettings.SEED = 1234;
+        kpmSettings.R = new Random(kpmSettings.SEED);
+        kpmSettings.MAIN_GRAPH = createGraph(kpmSettings, pathToResources + "/sampleNetwork.sif");
+        kpmSettings.COMBINE_FORMULA = "L1 || L2";
+        kpmSettings.ITERATION_BASED = false;
+        System.out.println("NUMBER OF NODES: " + kpmSettings.MAIN_GRAPH.getVertexCount());
+        System.out.println("NUMBER OF INTERACTIONS: " + kpmSettings.MAIN_GRAPH.getEdgeCount());
+        System.out.println("AVERAGE NODE DEGREE: " + kpmSettings.MAIN_GRAPH.getAverageDegree());
+
+        KPMDummyTaskMonitor dummyTaskMonitor = new KPMDummyTaskMonitor();
+        IKPMRunListener listener = new IKPMRunListener() {
+            @Override
+            public void runFinished(IKPMResultSet results) {
+                System.out.println("The run was finished!");
+                printSummary(results, kpmSettings);
+            }
+
+            @Override
+            public void runCancelled(String reason, String runID) {
+                System.out.println("The run was cancelled. \n" + reason);
+            }
+        };
+
+        BatchRunner batcher = new BatchRunner("core", dummyTaskMonitor, listener, kpmSettings);
+        batcher.run();
 //        try {
 //            displayKPMXY();
 //        } catch (IOException e) {
@@ -147,5 +186,268 @@ public class Main {
         //DialogUtils.showNonModalDialog("Info", "Info", DialogUtils.MessageTypes.Info);
         //DialogUtils.showNonModalDialog("Warn", "Warn", DialogUtils.MessageTypes.Warn);
     }
+
+    public static KPMGraph createGraph(KPMSettings kpmSettings, String graphFile) {
+        HashMap<String, String> nodeId2Symbol = new HashMap<String, String>();
+        Map<String, Map<String, int[]>> expressionMap = new HashMap<String, Map<String, int[]>>();
+        LinkedList<String[]> edgeList = new LinkedList<String[]>();
+        HashMap<String, Integer> without_exp = new HashMap<String, Integer>();
+        HashSet<String> inNetwork = new HashSet<String>();
+        HashMap<String, String> expressionFiles = new HashMap<>(kpmSettings.MATRIX_FILES_MAP);
+        HashMap<String, Integer> numCasesMap = new HashMap<>();
+        HashMap<String, Integer> numGenesMap = new HashMap<>();
+        HashMap<String, Double> avgExpressedCasesMap = new HashMap<>();
+        HashMap<String, Double> avgExpressedGenesMap = new HashMap<>();
+        HashMap<String, Integer> totalExpressedMap = new HashMap<>();
+        HashMap<String, Set<String>> backNodesMap = new HashMap<>();
+        HashMap<String, Set<String>> backNodesByExpMap = new HashMap<>();
+        HashMap<String, Set<String>> backGenesMap = new HashMap<>();
+
+        for (String fileId : expressionFiles.keySet()) {
+            numCasesMap.put(fileId, 0);
+            without_exp.put(fileId, 0);
+        }
+        try {
+
+            String line = "";
+            BufferedReader graphReader = new BufferedReader(new FileReader(graphFile));
+            int cont = 0;
+            while ((line = graphReader.readLine()) != null) {
+                String[] fields = line.split("\t");
+                String id1 = fields[0].trim();
+                nodeId2Symbol.put(id1, id1);
+                cont++;
+                if (fields.length < 3) {
+                    System.out.println("LINE NUMBER:" + cont);
+                    System.out.print(line);
+                }
+                String id2 = fields[2].trim();
+                nodeId2Symbol.put(id2, id2);
+
+                String[] edge = {id1, id2};
+                edgeList.add(edge);
+                inNetwork.add(id1);
+                inNetwork.add(id2);
+            }
+            for (String fileId : expressionFiles.keySet()) {
+                int totalExp = 0;
+                int numCases = 0;
+                int numGenes = 0;
+                HashMap<String, int[]> nodeId2Expression = new HashMap<String, int[]>();
+                Set<String> inExp = new HashSet<String>();
+
+                BufferedReader expressionReader =
+                        new BufferedReader(new FileReader(expressionFiles.get(fileId)));
+
+
+
+                while ((line = expressionReader.readLine()) != null) {
+                    numGenes++;
+                    String[] fields = line.split("\t");
+                    String nodeId = fields[0].trim();
+                    inExp.add(nodeId);
+
+                    int[] exp = new int[fields.length - 1];
+
+                    for (int i = 1; i < fields.length; i++) {
+                        String val = fields[i].trim();
+                        if (val.equals("1")) {
+                            exp[i - 1] = 1;
+                            totalExp++;
+                        } else if (val.equals("-1")) {
+                            exp[i - 1] = -1;
+                            totalExp++;
+                        } else if (val.equals("0")) {
+                            exp[i - 1] = 0;
+                        } else {
+                            exp[i - 1] = 0;
+                        }
+                    }
+
+                    if (expressionMap.containsKey(nodeId)) {
+                        expressionMap.get(nodeId).put(fileId, exp);
+                    } else {
+                        Map<String, int[]> aux = new HashMap<String, int[]>();
+                        aux.put(fileId, exp);
+                        expressionMap.put(nodeId, aux);
+                    }
+                    numCases = exp.length;
+                    numCasesMap.put(fileId, numCases);
+                }
+                totalExpressedMap.put(fileId, totalExp);
+                double avgExpCases = 0;
+                double avgExpGenes = 0;
+                if (totalExp > 0) {
+                    avgExpCases = (double)numCases / (double)totalExp;
+                    avgExpGenes = (double)numGenes / (double)totalExp;
+                }
+                numGenesMap.put(fileId, inExp.size());
+                avgExpressedCasesMap.put(fileId, avgExpCases);
+                avgExpressedGenesMap.put(fileId, avgExpGenes);
+                Set<String> bckN = new HashSet(inNetwork);
+                Set<String> bckG = new HashSet(inExp);
+                for (String id: inNetwork) {
+                    if (inExp.contains(id)) {
+                        bckN.remove(id);
+                    }
+                }
+                for (String id: inExp) {
+                    if (inNetwork.contains(id)) {
+                        bckG.remove(id);
+                    }
+                }
+
+                backNodesByExpMap.put(fileId, bckN);
+                backGenesMap.put(fileId, bckG);
+                expressionReader.close();
+            }
+
+
+
+            graphReader.close();
+
+
+        } catch (FileNotFoundException ex) {
+            //Logger.getLogger(Parser.class.getName()).log(Level.SEVERE, null, ex);
+            ex.printStackTrace();
+        } catch (IOException ioe) {
+            //Logger.getLogger(Parser.class.getName()).log(Level.SEVERE, null, ioe);
+            ioe.printStackTrace();
+        }
+
+        for (String nodeId : inNetwork) {
+            if (expressionMap.containsKey(nodeId)) {
+                Map<String, int[]> expMap = expressionMap.get(nodeId);
+                for (String expId : expressionFiles.keySet()) {
+                    if (!expMap.containsKey(expId)) {
+                        if (backNodesMap.containsKey(nodeId)) {
+                            backNodesMap.get(nodeId).add(expId);
+                        } else {
+                            HashSet<String> aux = new HashSet<String>();
+                            aux.add(expId);
+                            backNodesMap.put(nodeId, aux);
+                        }
+
+                    }
+                }
+            } else {
+                if (backNodesMap.containsKey(nodeId)) {
+                    backNodesMap.get(nodeId).addAll(expressionFiles.keySet());
+                } else {
+                    HashSet<String> aux = new HashSet<String>();
+                    aux.addAll(expressionFiles.keySet());
+                    backNodesMap.put(nodeId, aux);
+                }
+            }
+        }
+
+        kpmSettings.NUM_CASES_MAP = numCasesMap;
+        kpmSettings.NUM_STUDIES = numCasesMap.size();
+        return new KPMGraph(expressionMap, edgeList, nodeId2Symbol, backNodesMap, backGenesMap, kpmSettings.NUM_CASES_MAP);
+    }
+
+    public static void printSummary(IKPMResultSet results, KPMSettings kpmSettings) {
+        boolean isInes = kpmSettings.ALGO == Algo.GREEDY || kpmSettings.ALGO == Algo.LCG
+                || kpmSettings.ALGO == Algo.OPTIMAL;
+
+	    System.out.println("GENE EXCEPTIONS: " + kpmSettings.GENE_EXCEPTIONS);
+        System.out.println("CASE EXCEPTIONS" + "\t" + "MATRIX");
+
+        for (String expId : kpmSettings.CASE_EXCEPTIONS_MAP.keySet()) {
+            System.out.println("Case exceptions: " + kpmSettings.CASE_EXCEPTIONS_MAP.get(expId)
+                    + "\tMatrix: " + kpmSettings.MATRIX_FILES_MAP.get(expId));
+        }
+
+        if (kpmSettings.ALGO == Algo.GREEDY) {
+            System.out.println("STRATEGY: " + "\t" + "INES");
+            System.out.println("ALGORITHM: " + "\t" + "GREEDY");
+        } else if (kpmSettings.ALGO == Algo.LCG) {
+            System.out.println("STRATEGY: " + "\t" + "INES");
+            System.out.println("ALGORITHM: " + "\t" + "ACO");
+        } else if (kpmSettings.ALGO == Algo.OPTIMAL) {
+            System.out.println("STRATEGY: " + "\t" + "INES");
+            System.out.println("ALGORITHM: " + "\t" + "OPTIMAL");
+        } else if (kpmSettings.ALGO == Algo.EXCEPTIONSUMGREEDY) {
+            System.out.println("STRATEGY: " + "\t" + "GLONE");
+            System.out.println("ALGORITHM: " + "\t" + "GREEDY");
+        } else if (kpmSettings.ALGO == Algo.EXCEPTIONSUMACO) {
+            System.out.println("STRATEGY: " + "\t" + "GLONE");
+            System.out.println("ALGORITHM: " + "\t" + "ACO");
+        } else if (kpmSettings.ALGO == Algo.EXCEPTIONSUMOPTIMAL) {
+            System.out.println("STRATEGY: " + "\t" + "GLONE");
+            System.out.println("ALGORITHM: " + "\t" + "OPTIMAL");
+        }
+        IKPMResultItem best = results.getResults().get(0);
+        System.out.println("RANK: " + "\t" + best.getResultsInfoTable()[0][0]);
+        System.out.println("#NODES BEST RESULT: " + "\t" + best.getResultsInfoTable()[0][1]);
+        System.out.println("#EDGES BEST RESULT: " + "\t" + best.getResultsInfoTable()[0][2]);
+        System.out.println("AVG. EXP. BEST RESULT: " + "\t" + best.getResultsInfoTable()[0][3]);
+        System.out.println("INFO. CONTENT BEST RESULT: " + "\t" + best.getResultsInfoTable()[0][4]);
+        System.out.println("TOTAL RUNNING TIME: " + "\t" + kpmSettings.TOTAL_RUNNING_TIME);
+
+        validateResult(best, kpmSettings);
+
+    }
+
+    private static void validateResult(IKPMResultItem best, KPMSettings kpmSettings){
+        if (kpmSettings.ALGO == Algo.LCG &&
+                kpmSettings.SEED == 1234 &&
+                kpmSettings.MATRIX_FILES_MAP.get("L1").equals(pathToResources + "/datasets/indicator-matrices/huntington-gene-expression-down-p005.txt") &&
+                kpmSettings.CASE_EXCEPTIONS_MAP.get("L1") == 15 &&
+                kpmSettings.GENE_EXCEPTIONS == 5
+        ) {
+            System.out.println("Validating ACO/INES results ... ");
+            if((int) best.getResultsInfoTable()[0][0] != 1) {
+                throw new AssertionError("Rank is supposed to be 1 instead of " +
+                        (int) best.getResultsInfoTable()[0][0]);
+            }
+            if((int) best.getResultsInfoTable()[0][1] != 126){
+                throw new AssertionError("# Nodes in best result is supposed to be 126 instead of " +
+                        (int) best.getResultsInfoTable()[0][1]);
+            }
+            if((int) best.getResultsInfoTable()[0][2] != 149){
+                throw new AssertionError("# Edges in best result is supposed to be 149 instead of " +
+                        (int) best.getResultsInfoTable()[0][2]);
+            }
+            if((double) best.getResultsInfoTable()[0][3] != 93.39){
+                throw new AssertionError("Avg. exp. of best result is supposed to be 93.39 instead of " +
+                        (double) best.getResultsInfoTable()[0][3]);
+            }
+            if((double) best.getResultsInfoTable()[0][4] != 0.28) {
+                throw new AssertionError("Info. Content of best results is supposed to be 0.28 instead of " +
+                        (double) best.getResultsInfoTable()[0][4]);
+            }
+            System.out.println("All good!");
+        }else if (kpmSettings.ALGO == Algo.GREEDY &&
+                kpmSettings.SEED == 1234 &&
+                kpmSettings.MATRIX_FILES_MAP.get("L1").equals(pathToResources + "/datasets/indicator-matrices/huntington-gene-expression-down-p005.txt") &&
+                kpmSettings.CASE_EXCEPTIONS_MAP.get("L1") == 15 &&
+                kpmSettings.GENE_EXCEPTIONS == 5
+        ) {
+            System.out.println("Validating GREEDY/INES results ... ");
+            if((int) best.getResultsInfoTable()[0][0] != 1) {
+                throw new AssertionError("Rank is supposed to be 1 instead of " +
+                        (int) best.getResultsInfoTable()[0][0]);
+            }
+            if((int) best.getResultsInfoTable()[0][1] != 128){
+                throw new AssertionError("# Nodes in best result is supposed to be 128 instead of " +
+                        (int) best.getResultsInfoTable()[0][1]);
+            }
+            if((int) best.getResultsInfoTable()[0][2] != 156){
+                throw new AssertionError("# Edges in best result is supposed to be 156 instead of " +
+                        (int) best.getResultsInfoTable()[0][2]);
+            }
+            if((double) best.getResultsInfoTable()[0][3] != 94.79){
+                throw new AssertionError("Avg. exp. of best result is supposed to be 94.79 instead of " +
+                        (double) best.getResultsInfoTable()[0][3]);
+            }
+            if((double) best.getResultsInfoTable()[0][4] != 0.28) {
+                throw new AssertionError("Info. Content of best results is supposed to be 0.28 instead of " +
+                        (double) best.getResultsInfoTable()[0][4]);
+            }
+            System.out.println("All good!");
+        }
+    }
+
 
 }
