@@ -48,7 +48,7 @@ public class GraphProcessing {
 						.getExceptionNeighbors()) {
 
 					GeneCluster excNode = GeneCluster
-							.fromExceptionNode(exceptionNeighbor);
+							.fromExceptionNode(exceptionNeighbor, kpmSettings);
 
 					lg.addEdge(new GeneEdge(), newCluster, excNode);
 
@@ -57,14 +57,14 @@ public class GraphProcessing {
 			} else {
 				// check up all the exception neighbors of that node.
 				// Non-exceptional neighbors are added in the other case.
-				GeneCluster excNode = GeneCluster.fromExceptionNode(current);
+				GeneCluster excNode = GeneCluster.fromExceptionNode(current, kpmSettings);
 				processedNodes.add(current);
 
 				lg.addVertex(excNode);
 				for (GeneNode excNeighbor : g.getNeighbors(current)) {
 					if (!excNeighbor.isValid()) {
 						GeneCluster excNeighborCluster = GeneCluster
-								.fromExceptionNode(excNeighbor);
+								.fromExceptionNode(excNeighbor, kpmSettings);
 
 						lg.addVertex(excNeighborCluster);
 						if (lg.isNeighbor(excNeighborCluster, excNode)) {
