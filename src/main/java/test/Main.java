@@ -19,19 +19,15 @@ public class Main {
     private static final String pathToResources = "KPM-5/resources";
 
 	public static void main(String[] args) {
-        double original = 38;
-        int L = 2;
-
-        System.out.println("(int) Math.floor((original / (double)100) * L) = " + (int) Math.floor((original / (double)100) * L));
-        System.out.println("(int) Math.floor((original / L) * (double)100) = " + (int) Math.floor((original / L)));
-        System.out.println("(int) Math.floor(((double)100 / L) * original) = " + (int) Math.floor(((double)100 / L) * original));
-
         final KPMSettings kpmSettings = new KPMSettings();
+        // Change this to run the different algorithms
         kpmSettings.ALGO = Algo.LCG;
+        // Change the L parameter here
+        kpmSettings.CASE_EXCEPTIONS_MAP.put("L1", 15);
+        // Change the K parameter here
+        kpmSettings.GENE_EXCEPTIONS = 5;
         kpmSettings.MATRIX_FILES_MAP.put("L1", pathToResources +
                 "/datasets/indicator-matrices/huntington-gene-expression-down-p005.txt");
-        kpmSettings.CASE_EXCEPTIONS_MAP.put("L1", 15);
-        kpmSettings.GENE_EXCEPTIONS = 5;
         kpmSettings.SEED = 1234;
         kpmSettings.R = new Random(kpmSettings.SEED);
         kpmSettings.MAIN_GRAPH = createGraph(kpmSettings, pathToResources + "/sampleNetwork.sif");

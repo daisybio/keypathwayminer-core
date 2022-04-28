@@ -117,12 +117,15 @@ public class ACO implements Serializable {
 
             @Override
             public int compare(GeneNode o1, GeneNode o2) {
+                return new Double(o1.getHeuristicValue(kpmSettings.NODE_HEURISTIC_VALUE))
+                        .compareTo(new Double(o2.getHeuristicValue(kpmSettings.NODE_HEURISTIC_VALUE)));
+                /* OLD VERSION
                 int result = -new Double(o1.getAverageNeighborExpression()).compareTo(o2.getAverageNeighborExpression());
                 if (result == 0) {
                     return -1;
                 } else {
                     return result;
-                }
+                }*/
             }
         });
         if (nodes.size() < n) {
