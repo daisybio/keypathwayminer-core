@@ -1,2 +1,1 @@
-# keypathwayminer-core
-Core module of KeyPathwayMiner. Used to build various frontend applications, such as a Cytoscape 3 app.
+This branch is used in the standalone and R version of KeyPathwayMiner. The result object that is passed to these other versions has been slightly changed.
